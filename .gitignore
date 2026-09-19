@@ -1,0 +1,20 @@
+# Môi trường / setup — dựng lại mỗi lần bằng scripts/setup_env.sh, không commit
+.venv/
+third_party/
+environment_report.txt
+
+# Data / checkpoints / kết quả thí nghiệm — quá nặng cho git
+data/
+checkpoints/
+*.pth
+*.pt
+outputs/
+work_dirs/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
