@@ -26,9 +26,12 @@ Không giả định memory riêng của Claude còn từ phiên trước — tr
 ```bash
 bash scripts/setup_env.sh   # 1 lệnh duy nhất, dựng venv từ đầu, idempotent trên máy fresh
 source .venv/bin/activate
+bash scripts/download_dataset.sh   # tải subset COCO val2017 (1000 ảnh, seed cố định) cho Thí nghiệm 1 — cần venv ở trên trước
 ```
 
 Chi tiết/troubleshooting: [docs/environment_setup.md](docs/environment_setup.md).
+
+`scripts/download_dataset.sh` tải annotation đầy đủ của COCO val2017 + 1000 ảnh subset (chỉ ảnh có ≥1 annotation, `random.Random(seed=42)`, danh sách image ID ghi ra [configs/coco_val2017_subset_1000.json](configs/coco_val2017_subset_1000.json) — file này **có commit**, để mọi máy GPU thuê mới luôn ra đúng cùng subset). Dữ liệu ảnh/annotation thật nằm trong `data/coco/` — **không commit** (xem `.gitignore`), tải lại mỗi lần qua script này.
 
 ## Quy ước
 

@@ -163,9 +163,11 @@ Thí nghiệm này phải cô lập tối đa ảnh hưởng của backbone.
 
 ## 6.1 Surrogate
 
+**Pivot 2026-09-19** (xem docs/progress_log.md entry cùng ngày để biết đầy đủ lý do): đổi từ Faster R-CNN sang **Mask R-CNN**, lý do ở §6.2 bên dưới. Backbone surrogate vẫn giữ nguyên ResNet-50 như dự định ban đầu.
+
 Dùng một surrogate cố định:
 
-- Faster R-CNN + ResNet-50
+- Mask R-CNN + ResNet-50 (chỉ dùng box output/loss cho tấn công và đánh giá, không dùng nhánh mask)
 
 ---
 
@@ -173,16 +175,20 @@ Dùng một surrogate cố định:
 
 Ưu tiên các target giữ nguyên kiến trúc detector, chỉ thay đổi feature extractor.
 
-So sánh có kiểm soát được đề xuất:
+**Pivot 2026-09-19**: đã verify trực tiếp trong MMDetection v3.3.0 (`configs/convnext/`, `configs/swin/`) — **không tồn tại** cấu hình Faster R-CNN + ConvNeXt hoặc Faster R-CNN + Swin (2 backbone này trong MMDetection chỉ có ở Mask R-CNN / Cascade Mask R-CNN / RetinaNet). Để giữ đúng nguyên tắc "chỉ đổi feature extractor, không đổi kiến trúc detector" trên cả 3 target (thay vì chỉ 1/3), chuyển toàn bộ — cả surrogate lẫn target — sang **Mask R-CNN**. So sánh trực tiếp phần bbox_head/rpn_head giữa base config Faster R-CNN và Mask R-CNN trong MMDetection cho thấy nhánh box detection giống hệt nhau (cùng RPN, cùng bbox head/loss); Mask R-CNN chỉ thêm nhánh mask_head song song không tham gia vào box prediction. Khác biệt kiến trúc còn lại chỉ là `match_low_quality` trong RPN assigner lúc train (True ở Mask R-CNN, False ở Faster R-CNN) — ảnh hưởng nhỏ, không phải khác kiến trúc detector.
 
-1. Faster R-CNN + ResNet-101
+So sánh có kiểm soát được đề xuất (đã verify, xem docs/model_registry.md):
+
+1. Mask R-CNN + ResNet-101
    - Cùng họ backbone
 
-2. Faster R-CNN + ConvNeXt
+2. Mask R-CNN + ConvNeXt-Tiny
    - Họ backbone CNN khác
+   - Lưu ý: checkpoint chính thức duy nhất trong MMDetection dùng schedule 3x + AMP + multi-scale crop, không phải 1x như 2 target còn lại — chênh lệch protocol train (không phải kiến trúc) giữa target này và các target khác, xem model_registry.md phần ghi chú mở.
 
-3. Faster R-CNN + Swin Transformer
+3. Mask R-CNN + Swin-Tiny
    - CNN → Transformer
+   - Checkpoint chính thức dùng schedule 1x, khớp với surrogate và target ResNet-101.
 
 Nếu mô hình chuẩn không có sẵn, chọn mô hình tương đương gần nhất có trong MMDetection.
 

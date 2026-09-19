@@ -28,9 +28,11 @@ Chạy 1 lệnh, xong là có venv sẵn sàng — không cần thao tác tay n�
 | mmengine | mới nhất qua `mim` | mim tự chọn bản khớp torch/cuda đã cài |
 | mmcv | 2.1.0 | Cài qua `mim`, không cài qua pip thường (dễ sai bản build) |
 | mmpretrain | ≥1.2.0 | **Bắt buộc** để dùng được config ConvNeXt/Swin trong MMDetection — các config này đăng ký backbone qua registry của mmpretrain, thiếu là import lỗi dù mmdet đã cài đủ |
-| mmdetection | v3.3.0, clone + editable install vào `third_party/mmdetection` | Clone source thay vì chỉ `pip install mmdet` để chắc chắn có đủ toàn bộ `configs/` cần cho việc inspect/verify backbone (research_plan.md §13 bước 3), và để có thể patch cục bộ nếu cần sau này |
-| numpy | 1.26.4 (pin `<2`) | mmcv/mmdet ở version trên chưa tương thích đầy đủ numpy 2.x |
-| pycocotools, opencv-python-headless | mới nhất | eval COCO mAP, đọc/ghi ảnh; bản `headless` vì server không có màn hình |
+| mmdetection | v3.3.0, clone + editable install vào `third_party/mmdetection`, cài với `--no-build-isolation` | Clone source thay vì chỉ `pip install mmdet` để chắc chắn có đủ toàn bộ `configs/` cần cho việc inspect/verify backbone (research_plan.md §13 bước 3), và để có thể patch cục bộ nếu cần sau này. `--no-build-isolation` bắt buộc vì `setup.py` của mmdetection `import torch` ở build-time (qua `torch.utils.cpp_extension`) — build isolation mặc định của pip không thấy được torch đã cài trong venv |
+| setuptools | 69.5.1 (pin cứng, ghim lại ngay trước bước cài mmdetection) | `openxlab` (dependency gián tiếp của `openmim`) ghim `setuptools~=60.2.0` — quá cũ, không có PEP 660 `build_editable` hook nên editable install mmdetection lỗi. Không thể chỉ upgrade lên bản mới nhất: setuptools ≥81 đã bỏ hẳn `pkg_resources`, mà `torch.utils.cpp_extension` vẫn cần module đó. 69.5.1 là điểm vừa đủ mới (có PEP 660) vừa chưa bỏ `pkg_resources` |
+| numpy | 1.26.4 (pin `<2`, ghim lại nhiều lần trong script) | mmcv/mmdet ở version trên chưa tương thích đầy đủ numpy 2.x. mmcv/mmengine và `opencv-python-headless` bản mới đều kéo theo `numpy>=2` như dependency không pin — script phải pin lại numpy sau mỗi bước có nguy cơ bị ghi đè, chốt lần cuối ngay trước verify |
+| pycocotools | mới nhất | eval COCO mAP |
+| opencv-python-headless | 4.10.0.84 (pin cứng) | đọc/ghi ảnh; bản `headless` vì server không có màn hình. Bản "mới nhất" (opencv 5.x) đòi `numpy>=2`, xung đột thẳng với numpy pin ở trên nên phải ghim lại bản 4.x cuối cùng còn tương thích. mmcv/mmengine cũng tự kéo theo `opencv-python` (bản GUI, không pin) như dependency bắt buộc của chúng — script gỡ nó và chỉ giữ bản headless, **theo đúng thứ tự uninstall trước rồi mới install** (ngược lại sẽ hỏng `cv2`, vì cả hai package ghi đè cùng thư mục `cv2/` trong site-packages và uninstall sẽ xóa nhầm file mà bản còn lại vừa ghi) |
 
 ## Troubleshooting
 
