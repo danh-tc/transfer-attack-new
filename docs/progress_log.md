@@ -709,6 +709,93 @@ Object-weighted backward modification MÀ KHÔNG có clipping **không tạo imp
 
 ### Bước tiếp theo
 
-1. **Ablation B**: sweep λ (object-weight strength), cố định k=3 (đã xác nhận tối ưu ở Ablation A). Trả lời câu hỏi còn lại: object-region weighting có thực sự cần thiết không (so với chỉ clip đều, không weighting — đã có data point này = `reg_s3s4` từ 3A/3B, λ→"đồng nhất"), và strength bao nhiêu là hợp lý?
-2. Sau Ablation B mới tới Ablation C (mask shape).
+1. ~~**Ablation B**: sweep λ (object-weight strength), cố định k=3 (đã xác nhận tối ưu ở Ablation A). Trả lời câu hỏi còn lại: object-region weighting có thực sự cần thiết không (so với chỉ clip đều, không weighting — đã có data point này = `reg_s3s4` từ 3A/3B, λ→"đồng nhất"), và strength bao nhiêu là hợp lý?~~ Đã làm — xem entry dưới.
+2. Ablation C (mask shape) — **hoãn vô thời hạn** theo quyết định cuối entry dưới (hyperparameter ablation cơ bản coi như đủ, không grid-search sâu thêm chỉ để tối ưu vài phần nghìn ASR).
 3. **Nhắc lại quy tắc quan trọng**: mọi lần chạy lại script để sanity-test/regression-check PHẢI backup `results.json` hiện có trước nếu file đó chứa dữ liệu n=300 có giá trị — không có ngoại lệ dù chỉ chạy n nhỏ.
+
+## 2026-09-20 — Ablation B: Object-region weighting strength λ
+
+Giữ cố định Stage 3-4 và clip bound k=3, sweep strength của object-region weighting λ. λ=0 tương ứng pure clipping (`reg_s3s4`), không có object weighting bổ sung. Code: `experiments/experiment3d.py` (4 điểm chạy mới: λ=0.25/0.5/1/2), tái sử dụng λ=0 (=`reg_s3s4`, verify n=300 từ entry 3B) và λ≈2.333 (=`k3_original` của Ablation A) làm điểm tham chiếu, không chạy lại.
+
+**Kết quả n=300:**
+
+| λ | ConvNeXt | Swin | CrossAvg | R101 | WhiteBox | TransferGap |
+|---|---|---|---|---|---|---|
+| 0 | 0.4649 | 0.3965 | 0.4307 | 0.7167 | 0.9610 | +0.2860 |
+| 0.25 | 0.4654 | 0.3971 | 0.4313 | 0.7154 | 0.9610 | +0.2842 |
+| **0.5** | **0.4714** | **0.4062** | **0.4388** | 0.7056 | 0.9637 | **+0.2668** |
+| 1 | 0.4625 | 0.3995 | 0.4310 | 0.7128 | 0.9610 | +0.2818 |
+| 2 | 0.4678 | 0.3983 | 0.4330 | 0.7180 | 0.9603 | +0.2850 |
+| 2.333 | 0.4702 | 0.4013 | 0.4357 | 0.7128 | 0.9644 | +0.2771 |
+
+Curve theo λ không đơn điệu và nhìn chung khá phẳng, ngoại trừ vùng λ=0.5 cho CrossAvg cao nhất đồng thời TransferGap thấp nhất. Same-family và white-box không tăng tương ứng; tại λ=0.5, R101 thậm chí thấp hơn (0.7056, thấp nhất sweep), cho thấy cải thiện không đơn giản là do attack mạnh lên trên tất cả model.
+
+### Replicate: chạy độc lập lại λ=0 và λ=0.5 (đo noise floor tại đúng 2 điểm cần confirm)
+
+Code: `experiments/experiment3d_replicate.py` (tái sử dụng `run_one()` từ `experiment3d.py`, không copy logic).
+
+| Setting | Run 1 CrossAvg | Replicate CrossAvg |
+|---|---|---|
+| λ=0 | 0.4307 | 0.4316 |
+| λ=0.5 | 0.4388 | 0.4346 |
+
+λ=0.5 cao hơn λ=0 trong **cả hai lần chạy độc lập**: +0.0081 (lần 1) và +0.0030 (lặp lại). Trung bình hai lần: λ=0.5 ≈ 0.4367, λ=0 ≈ 0.4312 — chênh khoảng +0.0056.
+
+**Nuance quan trọng (thống nhất với user, tránh overclaim)**: replicate của λ=0.5 dao động lớn hơn control (λ=0) — **chưa đủ cơ sở để khẳng định λ=0.5 là global optimum chính xác**. Tuy nhiên, **thứ hạng tương đối λ=0.5 > λ=0 được tái lập độc lập** — đây là claim an toàn, đủ để chốt.
+
+### Kết luận đã chốt (user, 2026-09-20)
+
+> Object-region weighting provides an additional but secondary benefit beyond clipping. Its effect is localized around a moderate weighting strength rather than monotonic, and is weaker than the effect of clip-bound selection.
+
+Từ Ablation A + B: **Stage 3-4 gradient clipping là thành phần chính** (Ablation A: curve rõ ràng, non-monotonic, đơn điệu 2 phía quanh đỉnh k=3), **object-region weighting đóng vai trò refinement bổ sung** (Ablation B: curve phẳng hơn nhiều, chỉ nổi bật cục bộ quanh λ≈0.5, effect yếu hơn hẳn effect của k).
+
+### Quyết định dừng ablation hyperparameter
+
+Sau entry này, **coi hyperparameter ablation cơ bản đã đủ** — không tiếp tục grid-search λ chỉ để tối ưu thêm vài phần nghìn ASR (Ablation C — mask shape — hoãn vô thời hạn cùng lý do). Bước tiếp theo nên kiểm tra **component/mechanism của method** (vd ablation có/không có stage-selection dựa trên evidence so với chọn ngẫu nhiên/heuristic khác — đã làm 1 phần ở Thí nghiệm 3A rồi) hơn là tiếp tục tuning hyperparameter.
+
+## 2026-09-20 — HANDOFF: Component Ablation (3e) + Mechanism Validation (3f) CHƯA CÓ KẾT QUẢ, dừng chủ động giữa chừng
+
+**Đọc entry này đầu tiên nếu bắt đầu phiên mới.**
+
+### Trạng thái thật: KHÔNG có kết quả n=300 nào để đọc cho 3e/3f
+
+User đề xuất roadmap 4 bước sau khi chốt Ablation A+B (xem entry ngay phía trên): (1) Component ablation, (2) Mask/control ablation, (3) Mechanism validation (đo lại cos(g_s,g_t) trước/sau regularization), (4) Full baseline comparison — **ưu tiên bước 1 → bước 3 trước**, bỏ qua bước 2 tạm thời.
+
+Đã viết code cho cả bước 1 và bước 3, chạy song song (share GPU), rồi **user yêu cầu dừng chủ động** (không phải crash/lỗi) giữa chừng:
+
+- `experiments/experiment3e.py` (Component Ablation — bảng: baseline / clip Stage 3 only / clip Stage 4 only / clip Stage 3+4 / Stage 3+4 + object weighting λ=0.5): mới chạy xong ~150/300 ảnh của setting ĐẦU TIÊN (`clip_s3`), setting `clip_s4` **chưa chạy dòng nào**. `outputs/experiment3e/results.json` hiện tại **vẫn là dữ liệu sanity-test n=5 cũ** (script chỉ ghi file sau khi 1 setting n=300 chạy xong hoàn toàn — chưa setting nào xong nên chưa ghi đè) — **KHÔNG đọc file này để lấy số n=300, sẽ nhầm**.
+- `experiments/experiment3f.py` (Mechanism Validation — đo cos(g_s,g_t) trước/sau regularization Stage 3-4 k=3 λ=0.5, tái sử dụng population từ `outputs/experiment2a/records.jsonl`): mới chạy ~20-30/300 ảnh. `outputs/experiment3f/records.jsonl` + `summary.json` **cũng vẫn là dữ liệu sanity-test n=5 cũ** (cùng lý do — script chỉ ghi 1 lần ở CUỐI, sau khi xử lý hết toàn bộ n ảnh, chưa xong nên chưa ghi đè). Sanity-test n=5 ban đầu **đã cho tín hiệu rất đúng hướng hypothesis** (đáng chú ý, nhưng KHÔNG đủ tin cậy để kết luận gì): R101 delta=-0.0089 (âm), ConvNeXt delta=+0.0010, Swin delta=+0.0052 (cả 2 cross-family đều dương, same-family âm — đúng chiều mong đợi).
+
+Cả 2 tmux session (`exp3e_run`, `exp3f_run`) đã bị kill sạch, không còn process nào chạy (`ps aux | grep experiment3` rỗng).
+
+### Việc cần làm khi resume: chạy lại từ đầu, không có gì để "tiếp tục"
+
+Cả 2 script đều KHÔNG có checkpoint/cache giữa chừng (giống bài học từ HANDOFF Thí nghiệm 1B trước đây) — resume nghĩa là chạy lại từ đầu:
+
+```bash
+cd /workspace/transfer-attack-new
+source .venv/bin/activate
+# Nếu máy mới hoàn toàn (khác máy này): setup_env.sh -> download_dataset.sh -> tải checkpoint (xem model_registry.md + 2 checkpoint x101/r50_3x) -> build_subset_annotations.py trước
+tmux new-session -d -s exp3e_run "source .venv/bin/activate && python3 -u experiments/experiment3e.py 300 > outputs/experiment3e/run.log 2>&1; echo EXP3E_DONE_EXIT=\$? >> outputs/experiment3e/run.log"
+tmux new-session -d -s exp3f_run "source .venv/bin/activate && python3 -u experiments/experiment3f.py 300 > outputs/experiment3f/run.log 2>&1; echo EXP3F_DONE_EXIT=\$? >> outputs/experiment3f/run.log"
+```
+
+Ước tính ~20-25 phút mỗi job nếu chạy riêng lẻ (không share GPU); nếu chạy song song như lần trước sẽ chậm hơn (quan sát thực tế lần trước: sau ~7 phút chạy song song, 3e mới xong 150/300 setting đầu, 3f mới ~20-30/300 — chậm hơn đáng kể so với chạy riêng, nên cân nhắc chạy TUẦN TỰ thay vì song song nếu muốn nhanh hơn tổng thể).
+
+Nếu máy GPU thuê đã đổi (khác máy này — theo CLAUDE.md luôn giả định vậy trừ khi chắc chắn cùng máy): `outputs/experiment2a/records.jsonl` (population dùng cho 3f), `outputs/experiment3b/results.json` và `outputs/experiment3d/results.json` (dữ liệu tái sử dụng cho 3e) đều KHÔNG commit (gitignore không loại trừ `outputs/` thật ra — xem ghi chú mở phía dưới — nhưng theo quy ước dự án vẫn nên coi là derived data, không tin tưởng tuyệt đối nếu không tự kiểm tra lại) — cần chạy lại toàn bộ pipeline từ Thí nghiệm 2A trở đi nếu các file này không còn.
+
+### Tóm tắt ngữ cảnh đầy đủ (để không phải đọc lại toàn bộ log)
+
+Đã hoàn tất và CHỐT (không cần làm lại): RQ1 khóa, RQ2 khóa (backward sensitivity alignment > forward feature similarity, divergence từ Stage 3-4 — Thí nghiệm 2A/2B/2B.1/2C), Thí nghiệm 3A (causal intervention xác nhận Stage 3-4), Thí nghiệm 3B (object-conditioned weighting, kết hợp clip+mask tốt hơn từng phần riêng), Method v0.1 formalize đầy đủ (`research_plan.md` §9.1, khớp code `attacks/backward_reg_attack.py`), Ablation A (clip bound k=3 tối ưu, non-monotonic, có replicate xác nhận noise floor nhỏ), Ablation B (λ=0.5 tốt nhất nhưng không claim global optimum, có replicate xác nhận thứ hạng tương đối). Quyết định: dừng hyperparameter tuning, chuyển sang component/mechanism validation.
+
+**Đang làm dở (roadmap 4 bước của user, ưu tiên 1→3, bỏ qua 2 tạm thời)**:
+1. Component ablation (`experiment3e.py`) — CHƯA CÓ KẾT QUẢ n=300.
+2. Mask/control ablation (object mask thật vs uniform vs random cùng diện tích) — CHƯA BẮT ĐẦU, đang hoãn theo yêu cầu ưu tiên 1→3.
+3. Mechanism validation (`experiment3f.py`) — CHƯA CÓ KẾT QUẢ n=300.
+4. Full baseline comparison (MI-FGSM/DI-FGSM/OSFD/TGR/MIG) — CHƯA BẮT ĐẦU.
+
+**Ghi chú mở (không cấp thiết)**: `.gitignore` hiện KHÔNG loại trừ `outputs/` (chỉ loại `data/`, `checkpoints/`, `*.pth`, `*.pt`, `work_dirs/`, `*.npz`) — khác với giả định ngầm trong nhiều entry trước đây rằng "outputs/ không commit". Chưa ảnh hưởng gì (user tự quản lý commit), nhưng nếu sau này thấy `outputs/*.json`/`*.jsonl` xuất hiện trong `git status` ngoài ý muốn, đây là lý do — cân nhắc thêm `outputs/` vào `.gitignore` nếu không muốn commit chúng.
+
+### Trạng thái git
+
+Chưa commit gì trong toàn bộ session này kể từ lần cuối user tự commit (nếu có) — `git status --short` cho thấy nhiều file mới/sửa (`docs/progress_log.md`, `experiments/experiment3d_replicate.py`, `experiments/experiment3e.py`, `experiments/experiment3f.py`, và các `outputs/experiment3*/`). User biết và tự quản lý việc commit (đã nói trước đó "commit tôi tự làm được").

@@ -1,0 +1,121 @@
+{
+  "n_images": 300,
+  "settings": {
+    "lam0_replicate": {
+      "surrogate_r50": {
+        "family": "surrogate",
+        "clean_AP": 0.40214970056598165,
+        "clean_AP50": 0.5815186154776165,
+        "adv_AP": 0.003410054328106721,
+        "adv_AP50": 0.0056299065438749655,
+        "delta_AP": -0.39873964623787495,
+        "delta_AP50": -0.5758887089337416,
+        "delta_AP_pct": -99.15204354912923,
+        "delta_AP50_pct": -99.03186133787807,
+        "clean_correct_objects": 1487,
+        "evaded_objects": 1424,
+        "ASR": 0.9576328177538669
+      },
+      "target_r101": {
+        "family": "same-family",
+        "clean_AP": 0.4246838066710126,
+        "clean_AP50": 0.6099123973190939,
+        "adv_AP": 0.05819966623678625,
+        "adv_AP50": 0.0939818423889075,
+        "delta_AP": -0.36648414043422634,
+        "delta_AP50": -0.5159305549301864,
+        "delta_AP_pct": -86.29576514984207,
+        "delta_AP50_pct": -84.59092768043243,
+        "clean_correct_objects": 1525,
+        "evaded_objects": 1091,
+        "ASR": 0.7154098360655737
+      },
+      "target_convnext_t": {
+        "family": "cross-cnn-family",
+        "clean_AP": 0.5017838229929528,
+        "clean_AP50": 0.7085635343803154,
+        "adv_AP": 0.2097330398981209,
+        "adv_AP50": 0.31530271971541085,
+        "delta_AP": -0.2920507830948319,
+        "delta_AP50": -0.39326081466490453,
+        "delta_AP_pct": -58.20251066542127,
+        "delta_AP50_pct": -55.5011365365897,
+        "clean_correct_objects": 1693,
+        "evaded_objects": 783,
+        "ASR": 0.46249261665682223
+      },
+      "target_swin_t": {
+        "family": "cnn-to-transformer",
+        "clean_AP": 0.4655712883321552,
+        "clean_AP50": 0.6810912557841304,
+        "adv_AP": 0.24048466909391225,
+        "adv_AP50": 0.35629650578815447,
+        "delta_AP": -0.22508661923824297,
+        "delta_AP50": -0.32479474999597596,
+        "delta_AP_pct": -48.346327378688805,
+        "delta_AP50_pct": -47.68740565051661,
+        "clean_correct_objects": 1637,
+        "evaded_objects": 656,
+        "ASR": 0.4007330482590104
+      }
+    },
+    "lam0.5_replicate": {
+      "surrogate_r50": {
+        "family": "surrogate",
+        "clean_AP": 0.40214970056598165,
+        "clean_AP50": 0.5815186154776165,
+        "adv_AP": 0.004058992284534773,
+        "adv_AP50": 0.005898214354951226,
+        "delta_AP": -0.3980907082814469,
+        "delta_AP50": -0.5756204011226653,
+        "delta_AP_pct": -98.99067628825232,
+        "delta_AP50_pct": -98.9857221767343,
+        "clean_correct_objects": 1487,
+        "evaded_objects": 1430,
+        "ASR": 0.9616677874915938
+      },
+      "target_r101": {
+        "family": "same-family",
+        "clean_AP": 0.4246838066710126,
+        "clean_AP50": 0.6099123973190939,
+        "adv_AP": 0.05724700886249804,
+        "adv_AP50": 0.09187511267845547,
+        "delta_AP": -0.3674367978085145,
+        "delta_AP50": -0.5180372846406384,
+        "delta_AP_pct": -86.52008671787071,
+        "delta_AP50_pct": -84.93634281213204,
+        "clean_correct_objects": 1525,
+        "evaded_objects": 1090,
+        "ASR": 0.7147540983606557
+      },
+      "target_convnext_t": {
+        "family": "cross-cnn-family",
+        "clean_AP": 0.5017838229929528,
+        "clean_AP50": 0.7085635343803154,
+        "adv_AP": 0.2105247141727045,
+        "adv_AP50": 0.31609343125683714,
+        "delta_AP": -0.2912591088202483,
+        "delta_AP50": -0.39247010312347824,
+        "delta_AP_pct": -58.044738685076915,
+        "delta_AP50_pct": -55.389542938689154,
+        "clean_correct_objects": 1693,
+        "evaded_objects": 794,
+        "ASR": 0.4689899586532782
+      },
+      "target_swin_t": {
+        "family": "cnn-to-transformer",
+        "clean_AP": 0.4655712883321552,
+        "clean_AP50": 0.6810912557841304,
+        "adv_AP": 0.23475436003039613,
+        "adv_AP50": 0.34976706544840547,
+        "delta_AP": -0.2308169283017591,
+        "delta_AP50": -0.33132419033572497,
+        "delta_AP_pct": -49.577139760621584,
+        "delta_AP50_pct": -48.64607899778074,
+        "clean_correct_objects": 1637,
+        "evaded_objects": 655,
+        "ASR": 0.4001221747098351
+      }
+    }
+  }
+}

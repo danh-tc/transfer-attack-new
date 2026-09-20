@@ -1,0 +1,33 @@
+{
+  "k": 3,
+  "lam": 0.5,
+  "stage_modes": {
+    "3": "clip_weight",
+    "4": "clip_weight"
+  },
+  "n_images": 5,
+  "n_images_used": 5,
+  "summary": {
+    "target_r101": {
+      "family": "same-family",
+      "n": 26,
+      "mean_cos_before": 0.13497570495551023,
+      "mean_cos_after": 0.1260578169200856,
+      "delta": -0.00891788803542462
+    },
+    "target_convnext_t": {
+      "family": "cross-cnn-family",
+      "n": 30,
+      "mean_cos_before": 0.09717202289029955,
+      "mean_cos_after": 0.0982007258455269,
+      "delta": 0.001028702955227348
+    },
+    "target_swin_t": {
+      "family": "cnn-to-transformer",
+      "n": 28,
+      "mean_cos_before": 0.05092424555082938,
+      "mean_cos_after": 0.05607517085237695,
+      "delta": 0.005150925301547565
+    }
+  }
+}
