@@ -1,0 +1,42 @@
+[exp2c] đọc 299 ảnh có object từ /workspace/transfer-attack-new/outputs/experiment2a/records.jsonl
+[exp2c] loading models...
+Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_r50_fpn_1x_coco_20200205-d4b0c5d6.pth
+Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_r101_fpn_1x_coco_20200204-1efe0ed5.pth
+Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_convnext-t_p4_w7_fpn_fp16_ms-crop_3x_coco_20220426_154953-050731f4.pth
+Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_swin-t-p4-w7_fpn_1x_coco_20210902_120937-9d6b7cfa.pth
+[exp2c] building dataset (limit=300)...
+loading annotations into memory...
+Done (t=0.09s)
+creating index...
+index created!
+[exp2c] 300 images (dataset total: 1000)
+[exp2c] 20/300 ảnh xong (0.41 ảnh/s, ETA 11.4 phút, 20 ảnh dùng được, 1284 record)
+[exp2c] 40/300 ảnh xong (0.41 ảnh/s, ETA 10.5 phút, 40 ảnh dùng được, 2596 record)
+[exp2c] 60/300 ảnh xong (0.44 ảnh/s, ETA 9.0 phút, 59 ảnh dùng được, 3632 record)
+[exp2c] 80/300 ảnh xong (0.47 ảnh/s, ETA 7.8 phút, 79 ảnh dùng được, 4560 record)
+[exp2c] 100/300 ảnh xong (0.46 ảnh/s, ETA 7.2 phút, 99 ảnh dùng được, 5888 record)
+[exp2c] 120/300 ảnh xong (0.47 ảnh/s, ETA 6.4 phút, 119 ảnh dùng được, 6884 record)
+[exp2c] 140/300 ảnh xong (0.42 ảnh/s, ETA 6.3 phút, 139 ảnh dùng được, 9008 record)
+[exp2c] 160/300 ảnh xong (0.44 ảnh/s, ETA 5.3 phút, 159 ảnh dùng được, 9916 record)
+[exp2c] 180/300 ảnh xong (0.41 ảnh/s, ETA 4.9 phút, 179 ảnh dùng được, 12100 record)
+[exp2c] 200/300 ảnh xong (0.42 ảnh/s, ETA 4.0 phút, 199 ảnh dùng được, 13308 record)
+[exp2c] 220/300 ảnh xong (0.42 ảnh/s, ETA 3.2 phút, 219 ảnh dùng được, 14584 record)
+[exp2c] 240/300 ảnh xong (0.42 ảnh/s, ETA 2.4 phút, 239 ảnh dùng được, 15944 record)
+[exp2c] 260/300 ảnh xong (0.43 ảnh/s, ETA 1.6 phút, 259 ảnh dùng được, 16968 record)
+[exp2c] 280/300 ảnh xong (0.43 ảnh/s, ETA 0.8 phút, 279 ảnh dùng được, 18228 record)
+[exp2c] 300/300 ảnh xong (0.43 ảnh/s, ETA 0.0 phút, 299 ảnh dùng được, 19420 record)
+[exp2c] tổng hợp mean cos_sim theo stage x target...
+[exp2c] stage1 target_r101: mean_cos_sim=0.3285 (evaded=0.3336 not_evaded=0.3160, n=1525)
+[exp2c] stage1 target_convnext_t: mean_cos_sim=0.0676 (evaded=0.0689 not_evaded=0.0666, n=1693)
+[exp2c] stage1 target_swin_t: mean_cos_sim=0.0713 (evaded=0.0767 not_evaded=0.0682, n=1637)
+[exp2c] stage2 target_r101: mean_cos_sim=0.2926 (evaded=0.2903 not_evaded=0.2983, n=1525)
+[exp2c] stage2 target_convnext_t: mean_cos_sim=-0.0870 (evaded=-0.0878 not_evaded=-0.0864, n=1693)
+[exp2c] stage2 target_swin_t: mean_cos_sim=-0.0835 (evaded=-0.0768 not_evaded=-0.0874, n=1637)
+[exp2c] stage3 target_r101: mean_cos_sim=0.1330 (evaded=0.1355 not_evaded=0.1270, n=1525)
+[exp2c] stage3 target_convnext_t: mean_cos_sim=0.0296 (evaded=0.0418 not_evaded=0.0195, n=1693)
+[exp2c] stage3 target_swin_t: mean_cos_sim=-0.0145 (evaded=-0.0181 not_evaded=-0.0124, n=1637)
+[exp2c] stage4 target_r101: mean_cos_sim=0.1062 (evaded=0.1105 not_evaded=0.0955, n=1525)
+[exp2c] stage4 target_convnext_t: mean_cos_sim=0.0438 (evaded=0.0478 not_evaded=0.0405, n=1693)
+[exp2c] stage4 target_swin_t: mean_cos_sim=-0.0032 (evaded=-0.0043 not_evaded=-0.0025, n=1637)
+[exp2c] Xong. Kết quả: /workspace/transfer-attack-new/outputs/experiment2c/records.jsonl, /workspace/transfer-attack-new/outputs/experiment2c/summary.json
+EXP2C_DONE_EXIT=0

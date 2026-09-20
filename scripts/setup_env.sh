@@ -96,7 +96,10 @@ pip install -q "setuptools==69.5.1" wheel
 pip install -q -v -e "$MMDET_DIR" --no-build-isolation
 
 log "Cài các thư viện phụ trợ (dataset eval, ảnh, tiện ích)..."
-pip install -q pycocotools tqdm matplotlib
+# scipy: dùng cho thống kê (Mann-Whitney U, effect size) ở experiments/experiment2a.py — trước đó
+# chỉ có sẵn qua dependency gián tiếp của mmcv/mmengine, không được pin tường minh; khai báo rõ ở
+# đây để không phụ thuộc may rủi vào transitive dependency có thể đổi giữa các version mmcv/mmengine.
+pip install -q pycocotools tqdm matplotlib scipy
 
 log "Ghim opencv-python-headless và gỡ xung đột numpy/opencv..."
 # opencv-python-headless "mới nhất" (opencv 5.x) đã chuyển sang yêu cầu numpy>=2, xung đột với

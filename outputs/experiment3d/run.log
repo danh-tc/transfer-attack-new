@@ -1,0 +1,20 @@
+[exp3d] loading models...
+Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_r50_fpn_1x_coco_20200205-d4b0c5d6.pth
+Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_r101_fpn_1x_coco_20200204-1efe0ed5.pth
+Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_convnext-t_p4_w7_fpn_fp16_ms-crop_3x_coco_20220426_154953-050731f4.pth
+Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_swin-t-p4-w7_fpn_1x_coco_20210902_120937-9d6b7cfa.pth
+[exp3d] building dataset (limit=300)...
+loading annotations into memory...
+Done (t=0.13s)
+creating index...
+index created!
+[exp3d] 300 images (dataset total: 1000)
+loading annotations into memory...
+Done (t=0.09s)
+creating index...
+index created!
+
+[exp3d] === lam0.25: lambda=0.25 (beta=0.8, gần reg_s3s4) ===
+[exp3d][lam0.25] 50/300 ảnh xong (0.89 ảnh/s, ETA 4.7 phút)
+[exp3d][lam0.25] 100/300 ảnh xong (0.92 ảnh/s, ETA 3.6 phút)
+[exp3d][lam0.25] 150/300 ảnh xong (0.92 ảnh/s, ETA 2.7 phút)

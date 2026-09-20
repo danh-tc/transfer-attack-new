@@ -31,6 +31,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from mmdet.structures.bbox import bbox2roi
+from scipy.stats import mannwhitneyu
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, REPO_ROOT)
@@ -108,6 +109,62 @@ def _cos_sim(a, b):
     return float(torch.dot(a, b) / (a.norm() * b.norm() + 1e-12))
 
 
+def compute_summary(records, target_names):
+    """Tổng hợp per-target: mean/std cos_sim theo nhóm evaded/not-evaded, correlation, và Mann-
+    Whitney U (1 phía, H1: cos_sim nhóm evaded > not-evaded — đúng chiều hypothesis §7.A) + 2 effect
+    size đi kèm: rank-biserial (effect size chuẩn cho Mann-Whitney, [-1,1]) và Cohen's d (tham khảo,
+    dù phân phối cos_sim không hẳn chuẩn nên rank-biserial đáng tin hơn). p-value một mình không đủ
+    nói lên độ lớn hiệu ứng — luôn đọc kèm effect size."""
+    summary = {}
+    for t_name in target_names:
+        rs = [r for r in records if r["target"] == t_name]
+        if not rs:
+            continue
+        cos_evaded = np.array([r["cos_sim"] for r in rs if r["evaded"]])
+        cos_not = np.array([r["cos_sim"] for r in rs if not r["evaded"]])
+        all_cos = np.array([r["cos_sim"] for r in rs])
+        all_evaded = np.array([1.0 if r["evaded"] else 0.0 for r in rs])
+        corr = float(np.corrcoef(all_cos, all_evaded)[0, 1]) if len(rs) > 1 and all_cos.std() > 0 else float("nan")
+
+        entry = {
+            "family": rs[0]["family"],
+            "n_objects": len(rs),
+            "n_evaded": len(cos_evaded),
+            "n_not_evaded": len(cos_not),
+            "mean_cos_sim_evaded": float(np.mean(cos_evaded)) if len(cos_evaded) else float("nan"),
+            "mean_cos_sim_not_evaded": float(np.mean(cos_not)) if len(cos_not) else float("nan"),
+            "std_cos_sim_evaded": float(np.std(cos_evaded)) if len(cos_evaded) else float("nan"),
+            "std_cos_sim_not_evaded": float(np.std(cos_not)) if len(cos_not) else float("nan"),
+            "point_biserial_corr_cos_vs_evaded": corr,
+            "mean_cos_sim_overall": float(np.mean(all_cos)),
+        }
+
+        if len(cos_evaded) > 1 and len(cos_not) > 1:
+            u_stat, p_value = mannwhitneyu(cos_evaded, cos_not, alternative="greater")
+            n1, n2 = len(cos_evaded), len(cos_not)
+            # r = 2U/(n1*n2) - 1 (verify: x>>y hoàn toàn -> U=n1*n2 -> r=+1). Dấu ngược lại
+            # (1 - 2U/(n1n2)) cho ra âm khi x thật sự > y — đã tự kiểm chứng bằng ví dụ tổng hợp.
+            rank_biserial = (2 * u_stat) / (n1 * n2) - 1
+            pooled_std = np.sqrt(((n1 - 1) * cos_evaded.std(ddof=1) ** 2 + (n2 - 1) * cos_not.std(ddof=1) ** 2)
+                                  / (n1 + n2 - 2))
+            cohens_d = float((cos_evaded.mean() - cos_not.mean()) / pooled_std) if pooled_std > 0 else float("nan")
+            entry.update({
+                "mannwhitney_u": float(u_stat),
+                "mannwhitney_p_value_onesided": float(p_value),
+                "rank_biserial_effect_size": float(rank_biserial),
+                "cohens_d": cohens_d,
+            })
+
+        summary[t_name] = entry
+        extra = ""
+        if "mannwhitney_p_value_onesided" in entry:
+            extra = (f" | MWU p={entry['mannwhitney_p_value_onesided']:.2e} "
+                     f"rank_biserial={entry['rank_biserial_effect_size']:.4f} cohens_d={entry['cohens_d']:.4f}")
+        print(f"[exp2a] {t_name}: n={len(rs)} mean_cos(evaded)={entry['mean_cos_sim_evaded']:.4f} "
+              f"mean_cos(not_evaded)={entry['mean_cos_sim_not_evaded']:.4f} corr={corr:.4f}{extra}")
+    return summary
+
+
 def main(limit=None):
     os.makedirs(OUT_DIR, exist_ok=True)
     print("[exp2a] loading models...")
@@ -177,30 +234,7 @@ def main(limit=None):
         for r in records:
             f.write(json.dumps(r) + "\n")
 
-    summary = {}
-    for t_name in targets:
-        rs = [r for r in records if r["target"] == t_name]
-        if not rs:
-            continue
-        cos_evaded = [r["cos_sim"] for r in rs if r["evaded"]]
-        cos_not = [r["cos_sim"] for r in rs if not r["evaded"]]
-        all_cos = np.array([r["cos_sim"] for r in rs])
-        all_evaded = np.array([1.0 if r["evaded"] else 0.0 for r in rs])
-        corr = float(np.corrcoef(all_cos, all_evaded)[0, 1]) if len(rs) > 1 and all_cos.std() > 0 else float("nan")
-        summary[t_name] = {
-            "family": rs[0]["family"],
-            "n_objects": len(rs),
-            "n_evaded": len(cos_evaded),
-            "n_not_evaded": len(cos_not),
-            "mean_cos_sim_evaded": float(np.mean(cos_evaded)) if cos_evaded else float("nan"),
-            "mean_cos_sim_not_evaded": float(np.mean(cos_not)) if cos_not else float("nan"),
-            "std_cos_sim_evaded": float(np.std(cos_evaded)) if cos_evaded else float("nan"),
-            "std_cos_sim_not_evaded": float(np.std(cos_not)) if cos_not else float("nan"),
-            "point_biserial_corr_cos_vs_evaded": corr,
-            "mean_cos_sim_overall": float(np.mean(all_cos)),
-        }
-        print(f"[exp2a] {t_name}: n={len(rs)} mean_cos(evaded)={summary[t_name]['mean_cos_sim_evaded']:.4f} "
-              f"mean_cos(not_evaded)={summary[t_name]['mean_cos_sim_not_evaded']:.4f} corr={corr:.4f}")
+    summary = compute_summary(records, list(targets.keys()))
 
     with open(os.path.join(OUT_DIR, "summary.json"), "w") as f:
         json.dump({
@@ -211,6 +245,27 @@ def main(limit=None):
     print(f"[exp2a] Xong. Kết quả: {OUT_DIR}/records.jsonl, {OUT_DIR}/summary.json")
 
 
+def reanalyze():
+    """Tính lại summary.json từ records.jsonl đã có sẵn — dùng khi thêm thống kê mới
+    (vd Mann-Whitney) vào compute_summary() mà không muốn chạy lại toàn bộ GPU pipeline."""
+    records_path = os.path.join(OUT_DIR, "records.jsonl")
+    with open(records_path) as f:
+        records = [json.loads(line) for line in f]
+    target_names = sorted({r["target"] for r in records})
+    summary = compute_summary(records, target_names)
+
+    summary_path = os.path.join(OUT_DIR, "summary.json")
+    with open(summary_path) as f:
+        old = json.load(f)
+    old["summary"] = summary
+    with open(summary_path, "w") as f:
+        json.dump(old, f, indent=2)
+    print(f"[exp2a] Reanalyze xong. Kết quả: {summary_path}")
+
+
 if __name__ == "__main__":
-    limit = int(sys.argv[1]) if len(sys.argv) > 1 else None
-    main(limit=limit)
+    if len(sys.argv) > 1 and sys.argv[1] == "--reanalyze":
+        reanalyze()
+    else:
+        limit = int(sys.argv[1]) if len(sys.argv) > 1 else None
+        main(limit=limit)

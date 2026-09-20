@@ -522,6 +522,96 @@ Thành phần tiềm năng:
 - feature disruption
 - frequency-domain regularization
 
+---
+
+## 9.1 Method v0.1 (formalized, chốt 2026-09-20 — sau Thí nghiệm 3A + 3B)
+
+**Thay thế phần lý thuyết chung chung ở §9 phía trên** (viết trước khi có bằng chứng thực nghiệm) bằng công thức cụ thể, KHỚP CHÍNH XÁC với code hiện tại (`attacks/backward_reg_attack.py`) — không viết công thức "đẹp hơn" implementation thật (quy tắc đã thống nhất với user).
+
+### Ký hiệu
+
+- \(x\): ảnh (đang craft adversarial).
+- \(F_l = f_l(x)\): feature map thô của backbone tại stage \(l \in \{1,2,3,4\}\) — tức `model.backbone(x)[l-1]`, TRƯỚC neck/FPN.
+- \(L\): loss của attack (cross-entropy tại đúng RoI của GT, `objective="cls"` — `_bbox_cls_loss`).
+- \(g_l = \partial L / \partial F_l\): gradient chảy qua stage \(l\) trong lúc `torch.autograd.grad(L, x)` — chặn bằng `F_l.register_hook(...)`.
+- \(s_l \in \{4,8,16,32\}\): stride của stage \(l\) (verify 2026-09-20, giống nhau ở cả 4 model — xem Thí nghiệm 2B).
+
+### Khối 1 — Stage Selection
+
+\[
+\mathcal{S}^* = \{3, 4\}
+\]
+
+Chọn dựa trên bằng chứng backward-sensitivity đo được ở Thí nghiệm 2C (không phải heuristic/toàn mạng như TGR/PAS/GRA), và xác nhận causal ở Thí nghiệm 3A. Với \(l \notin \mathcal{S}^*\): \(\hat g_l = g_l\) (không đổi gì — code không đăng ký hook ở stage đó).
+
+### Khối 2 — Backward Regularization (variance clipping)
+
+Với mỗi \(l \in \mathcal{S}^*\), tính trên TOÀN BỘ tensor \(g_l\) (1 cặp số vô hướng \(\mu_l,\sigma_l\) cho cả tensor — không phải per-channel/per-pixel):
+
+\[
+\mu_l = \text{mean}(g_l), \quad \sigma_l = \text{std}(g_l)
+\]
+
+\[
+\tilde g_l = \text{clip}\big(g_l;\ \mu_l - k\sigma_l,\ \mu_l + k\sigma_l\big)
+\]
+
+\(k = 3\) (hằng số cố định trong code hiện tại — chưa tune, đối tượng của **Ablation A**).
+
+### Khối 3 — Object-Conditioned Weighting
+
+Mask không gian tại stage \(l\), xây từ union các GT box (quy đổi tọa độ qua \(s_l\)), per-pixel \(p\):
+
+\[
+M_l(p) = \begin{cases} 1 & p \in \bigcup_i \text{box}_i / s_l \\ \beta & \text{ngược lại} \end{cases}
+\]
+
+\(\beta = 0.3\) (hằng số cố định trong code — `OBJECT_MASK_BG_WEIGHT`, chưa tune, đối tượng của **Ablation B**). Mask hiện tại là **hard box, không làm mượt biên** (đối tượng của **Ablation C** — mask shape).
+
+### Công thức tổng (mode `"clip_weight"` — setting tốt nhất ở 3B)
+
+\[
+\hat g_l =
+\begin{cases}
+g_l & l \notin \mathcal{S}^* \\[4pt]
+M_l \odot \tilde g_l + (1 - M_l) \odot g_l & l \in \mathcal{S}^*
+\end{cases}
+\]
+
+**Đây là 1 convex blend per-pixel giữa gradient ĐÃ CLIP và gradient GỐC (chưa clip), điều chỉnh theo mask** — KHÔNG phải \(M_l \odot \tilde g_l\) (multiplicative thuần) và KHÔNG phải \((1+\lambda M_l)\odot \tilde g_l\) (residual form) như phác thảo ban đầu (đã sửa sau khi đối chiếu trực tiếp với code, 2026-09-20). Cụ thể ngoài vùng object (\(M_l(p)=\beta=0.3\)): \(\hat g_l(p) = 0.3\,\tilde g_l(p) + 0.7\,g_l(p)\) — vẫn còn 30% ảnh hưởng của clip, không phải gradient gốc thuần túy.
+
+Setting `"weight"` (đã test ở 3B, KHÔNG có tác dụng đứng một mình) là 1 nhánh riêng, không đi qua clip:
+
+\[
+\hat g_l = M_l \odot g_l \quad (\text{không có bước clip})
+\]
+
+### Chuẩn bị cho Ablation B (object-weight strength) — cần refactor nhỏ
+
+Để sweep "độ mạnh" của object-weighting với 1 tham số liên tục \(\lambda\) sao cho \(\lambda=0\) khớp CHÍNH XÁC lại `reg_s3s4` (yêu cầu của user), tổng quát hóa \(\beta\) thành hàm của \(\lambda\):
+
+\[
+\beta(\lambda) = \frac{1}{1+\lambda}
+\]
+
+Tại \(\lambda=0\): \(\beta=1 \Rightarrow M_l(p)=1 \ \forall p \Rightarrow \hat g_l = \tilde g_l\) — đúng bằng `reg_s3s4`, mọi pixel đều bị clip đều tay, không phân biệt object/background. \(\lambda\) tăng → \(\beta\) giảm → blend ngoài vùng object nghiêng dần về gradient gốc (chưa clip). Config đã chạy ở Thí nghiệm 3B (\(\beta=0.3\)) tương ứng \(\lambda = 1/\beta - 1 \approx 2.333\) — **tái sử dụng được luôn làm 1 điểm dữ liệu trong sweep Ablation B, không cần chạy lại**.
+
+### 3 hằng số cần ablation (one-factor-at-a-time quanh config 3B, theo đúng thứ tự đã thống nhất)
+
+| Ablation | Tham số | Grid đề xuất | Ghi chú |
+|---|---|---|---|
+| A | \(k\) (clip bound) | \(\{1, 2, 3, 4, \text{no-clip}\}\) | \(k=3\) là điểm hiện tại (3A/3B) |
+| B | \(\lambda\) (object-weight strength) | \(\{0, 0.25, 0.5, 1, 2\}\) | \(\lambda=0\) = `reg_s3s4` (tái dùng); \(\lambda\approx 2.33\) đã có từ 3B |
+| C | Mask shape | hard box (hiện tại) / soft-Gaussian / dilated / objectness-derived | làm sau cùng, sau khi đã chọn \(k^*,\lambda^*\) |
+
+**Quy tắc chọn hyperparameter** (thống nhất với user, 2026-09-20): dựa trên **cross-family average ASR** và **TransferGap**, KHÔNG dựa riêng vào 1 target (ConvNeXt hoặc Swin):
+
+\[
+\text{CrossFamilyASR} = \frac{ASR_{ConvNeXt} + ASR_{Swin}}{2} \quad \uparrow, \qquad \text{TransferGap} \quad \downarrow
+\]
+
+Một setting tăng Swin nhưng giảm ConvNeXt (hoặc ngược lại) KHÔNG được gọi là "improvement" tổng quát — phải cải thiện cả 2 hoặc ít nhất không đánh đổi cái này lấy cái kia.
+
 Đây chỉ là hướng nghiên cứu, chưa phải phương pháp cố định.
 
 ---
@@ -587,17 +677,27 @@ Cách diễn đạt claim (cố ý, không claim nhân quả tuyệt đối): **
 
 Thuộc tính biểu diễn đo lường được nào giải thích tốt nhất khoảng cách chuyển giao xuyên họ?
 
-Ứng viên:
+Ứng viên (đã kiểm tra bằng thực nghiệm — Thí nghiệm 2A/2B/2B.1/2C, docs/progress_log.md):
 
-- gradient similarity
-- feature similarity
-- saliency similarity
-- object evidence similarity
-- transformation consistency
+- gradient similarity — **có liên hệ đúng chiều** (2A: cos_sim cao hơn ở nhóm evaded, p cực nhỏ, effect size trung bình-lớn; 2C: mean cos_sim theo target đúng thứ tự ASR từ Stage 3 trở đi)
+- feature similarity (raw forward, đo bằng linear CKA) — **đã bác bỏ** làm cơ chế chính (2B: thứ tự CKA sai theo target; 2B.1: CKA_evaded < CKA_not_evaded ở deep stage, ngược hypothesis)
+- saliency similarity, object evidence similarity, transformation consistency — chưa kiểm tra (không cần nữa, xem câu trả lời dưới)
+
+**KHÓA (locked) — 2026-09-20**, dựa trên Thí nghiệm 2A + 2B + 2B.1 + 2C:
+
+> **RQ2 — Answered**: Cross-family transferability is better explained by **backward sensitivity alignment** than by raw forward feature similarity. Mid-to-deep backbone stages (Stage 3–4) are where architecture-dependent backward divergence emerges and aligns with the observed transfer gap.
+
+Không cần điều tra thêm saliency/object evidence/transformation consistency ở mức forward representation nữa — dữ liệu đã đủ rõ để chuyển trọng tâm sang RQ3 (thiết kế method dựa trên backward sensitivity).
 
 ### RQ3
 
-Một tấn công single-surrogate có thể khai thác "object evidence" bất biến theo kiến trúc để giảm khoảng cách chuyển giao xuyên họ hay không?
+**Cập nhật 2026-09-20** — cụ thể hóa từ câu hỏi gốc, dựa trực tiếp trên RQ2 đã khóa (không còn là "object evidence" chung chung mà là "backward sensitivity tại Stage 3-4" cụ thể):
+
+> **Can we design a single-surrogate attack that makes mid/deep backward signals less architecture-specific and thereby improves cross-family transferability?**
+
+Đây là câu hỏi mở duy nhất còn lại — điểm xuất phát cho literature search / idea generation / thiết kế method (research_plan.md §8 bước 1 trở đi). RQ1 (khóa) → RQ2 (khóa) → RQ3 (method search, đang mở).
+
+Câu hỏi gốc (tham khảo, đã thay thế bởi câu trên): "Một tấn công single-surrogate có thể khai thác 'object evidence' bất biến theo kiến trúc để giảm khoảng cách chuyển giao xuyên họ hay không?" — vẫn đúng tinh thần, nhưng "object evidence bất biến theo kiến trúc" giờ đã được cụ thể hóa thành "backward sensitivity ít architecture-specific hơn tại Stage 3-4", nhờ RQ2 đã trả lời.
 
 ---
 

@@ -7,18 +7,6 @@
   "iou_thr": 0.5,
   "n_images": 300,
   "summary": {
-    "target_r101": {
-      "family": "same-family",
-      "n_objects": 1525,
-      "n_evaded": 1085,
-      "n_not_evaded": 440,
-      "mean_cos_sim_evaded": 0.13968734505247274,
-      "mean_cos_sim_not_evaded": 0.08775340035777349,
-      "std_cos_sim_evaded": 0.07549374935956181,
-      "std_cos_sim_not_evaded": 0.05590884550132145,
-      "point_biserial_corr_cos_vs_evaded": 0.31697804709154676,
-      "mean_cos_sim_overall": 0.1247031249438382
-    },
     "target_convnext_t": {
       "family": "cross-cnn-family",
       "n_objects": 1693,
@@ -29,7 +17,27 @@
       "std_cos_sim_evaded": 0.0557028247291304,
       "std_cos_sim_not_evaded": 0.04590388633531026,
       "point_biserial_corr_cos_vs_evaded": 0.35145141117020917,
-      "mean_cos_sim_overall": 0.0696963820492384
+      "mean_cos_sim_overall": 0.0696963820492384,
+      "mannwhitney_u": 507909.0,
+      "mannwhitney_p_value_onesided": 8.3394287870154e-53,
+      "rank_biserial_effect_size": 0.42992398648648655,
+      "cohens_d": 0.7536030032562451
+    },
+    "target_r101": {
+      "family": "same-family",
+      "n_objects": 1525,
+      "n_evaded": 1085,
+      "n_not_evaded": 440,
+      "mean_cos_sim_evaded": 0.13968734505247274,
+      "mean_cos_sim_not_evaded": 0.08775340035777349,
+      "std_cos_sim_evaded": 0.07549374935956181,
+      "std_cos_sim_not_evaded": 0.05590884550132145,
+      "point_biserial_corr_cos_vs_evaded": 0.31697804709154676,
+      "mean_cos_sim_overall": 0.1247031249438382,
+      "mannwhitney_u": 345388.0,
+      "mannwhitney_p_value_onesided": 5.621253762550746e-43,
+      "rank_biserial_effect_size": 0.44695433598659395,
+      "cohens_d": 0.7371676230922907
     },
     "target_swin_t": {
       "family": "cnn-to-transformer",
@@ -41,7 +49,11 @@
       "std_cos_sim_evaded": 0.034731877643087286,
       "std_cos_sim_not_evaded": 0.025305842710007322,
       "point_biserial_corr_cos_vs_evaded": 0.32723725012607696,
-      "mean_cos_sim_overall": 0.03601588769008395
+      "mean_cos_sim_overall": 0.03601588769008395,
+      "mannwhitney_u": 438034.0,
+      "mannwhitney_p_value_onesided": 8.297452034724449e-42,
+      "rank_biserial_effect_size": 0.3984197168260253,
+      "cohens_d": 0.7157981371957122
     }
   }
 }

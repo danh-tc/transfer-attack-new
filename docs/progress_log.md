@@ -340,3 +340,375 @@ Khớp gần như y hệt bản n=1000 ngay phía trên (chênh lệch <2 điể
 - `research_plan.md` §6.8 và RQ1 (§12) đã được đánh dấu supersede tương ứng, trỏ về entry này.
 - **Việc chưa làm / cần cẩn thận**: `outputs/experiment1/raw_predictions.json` và các file kết quả n=1000 cũ (trước fix) đã bị ghi đè khi re-run — chỉ còn `results_n1000_postfix_verify.json` (n=1000, ĐÃ fix) làm tham khảo, không còn giữ bản n=1000 pre-fix nào (không cần thiết, đã biết là sai). `raw_predictions.json` hiện tại tương ứng với lần chạy n=300 mới nhất, không phải n=1000.
 - Bước tiếp theo: viết code Thí nghiệm 2A (gradient alignment, xem entry phía trên) — dùng attack ĐÃ FIX, nhãn evaded/not-evaded nên tính lại trực tiếp trong code Thí nghiệm 2A (không tái sử dụng `outputs/experiment1b/results.json` vì file đó không lưu per-object raw predictions).
+
+## 2026-09-20 — Thí nghiệm 2A: cài đặt + chạy (n=300, confirm), gradient alignment giải thích được transfer gap
+
+### Đề xuất gốc của user (ghi nguyên văn, làm cơ sở đối chiếu đã cover được bao nhiêu)
+
+> Bước tiếp theo nên vào Experiment 2 – tìm cơ chế. Mình đề xuất bắt đầu bằng thứ tự rẻ → sâu:
+>
+> 1. Gradient alignment trước. Với cùng clean image/object, đo cosine similarity: cos(g_s,g_t) = g_s^T g_t / (||g_s|| ||g_t||) giữa surrogate và từng target. Hypothesis: R50-R101 > R50-ConvNeXt > R50-Swin
+> 2. Kiểm tra: GradientSimilarity ↑ ⟺ TransferSuccess ↑. Không chỉ correlate theo 3 target models, vì quá ít điểm. Hãy tính per-image hoặc per-object, rồi so distribution giữa evaded và not evaded.
+> 3. Nếu gradient alignment giải thích được gap → tiếp tục xuống feature-level alignment để tìm layer nào gây ra divergence.
+> 4. Nếu gradient alignment yếu → chuyển sớm sang object evidence / saliency / transformation consistency.
+>
+> Một Experiment 2A rất sạch sẽ là: Architecture family → gradient alignment → transfer success
+>
+> Nếu kết quả ra kiểu (R50→R101 high/high, R50→ConvNeXt medium/medium, R50→Swin low/low) thì bạn bắt đầu có mechanistic explanation, chứ không còn chỉ có empirical transfer gap.
+>
+> Sau đó mới đặt câu hỏi quan trọng nhất cho method: Làm sao từ một surrogate duy nhất tạo gradient/feature direction ít architecture-specific hơn? Đây sẽ là điểm xuất phát trực tiếp để search idea và tạo method mới.
+
+### Phần đã cover trong lần chạy này (so với đề xuất trên)
+
+- **Mục 1 (gradient alignment, cos_sim giữa surrogate và từng target)** — ĐÃ LÀM ĐỦ. Code `experiments/experiment2a.py`, verify hypothesis thứ tự R50-R101 > R50-ConvNeXt > R50-Swin bằng `mean_cos_sim_overall` từng target — **khớp đúng thứ tự**.
+- **Mục 2 (kiểm tra GradientSimilarity ↑ ⟺ TransferSuccess ↑, per-object không phải chỉ 3 điểm, so distribution evaded vs not-evaded)** — ĐÃ LÀM PHẦN LÕI, còn thiếu 1 phần nhỏ: đã tính per-object thật (không phải per-image), đã so `mean_cos_sim_evaded` vs `mean_cos_sim_not_evaded` + Pearson/point-biserial correlation trên hàng nghìn record — nhưng **chưa chạy 1 test thống kê chính thức** (vd Mann-Whitney U hoặc t-test 2 mẫu độc lập) để khẳng định khác biệt evaded/not-evaded có ý nghĩa thống kê hay chỉ dừng ở so mean/std/correlation mô tả. Nên làm nếu cần con số p-value cho paper.
+- **Mục "Experiment 2A sạch sẽ: Architecture family → gradient alignment → transfer success"** — ĐÃ CONFIRM đầy đủ cả chuỗi, không chỉ từng khúc rời: family family ordering (r101 same > ConvNeXt cross-CNN > Swin cross-family) → cos_sim ordering (khớp) → ASR ordering đã biết từ Exp1/1B (khớp) — đúng y hệt pattern ví dụ user đưa ra (high/high, medium/medium, low/low).
+- **Mục 3 (nếu giải thích được → xuống feature-level alignment)** — CHƯA LÀM, đây là bước kế tiếp (§7.B research_plan.md), quyết định rẽ nhánh đã đúng hướng vì mục 1+2 cho tín hiệu mạnh (không rẽ sang mục 4).
+- **Mục 4 (object evidence/saliency/transformation consistency)** — không áp dụng, không đi nhánh này vì gradient alignment đã giải thích được gap.
+- **Câu hỏi cuối cho method ("làm sao tạo gradient/feature direction ít architecture-specific hơn")** — CHƯA bắt đầu, đây là việc của giai đoạn thiết kế method (research_plan.md §8-§9), sau khi xong cả gradient-level lẫn feature-level.
+
+**Tóm lại: đã cover trọn phần "gradient alignment" (mục 1+2 và toàn bộ chuỗi suy luận), chưa đụng tới feature-level (mục 3) và câu hỏi method (đoạn cuối) — đúng như thiết kế rẻ→sâu, dừng đúng chỗ để chờ quyết định có xuống sâu hơn không.**
+
+### Kết quả (n=300, tier confirm — code: `experiments/experiment2a.py`, output: `outputs/experiment2a/records.jsonl` + `summary.json`)
+
+Config attack y hệt Exp1/1B (đã fix bug tọa độ RoI): epsilon=8.0, num_iter=10, decay=1.0, objective="cls". Với mỗi object clean-correct (theo từng target), tính cos(g_s, g_t) trên ảnh sạch (không chạy attack lúc tính gradient), so với nhãn evaded/not-evaded (object đó có bị attack — crafted trên surrogate — làm target né tránh hay không).
+
+| Target | Family | n objects | mean cos_sim (evaded) | mean cos_sim (not evaded) | correlation (point-biserial) |
+|---|---|---|---|---|---|
+| target_r101 | same-family | 1525 | 0.1397 | 0.0878 | +0.3170 |
+| target_convnext_t | cross-cnn-family | 1693 | 0.0905 | 0.0524 | +0.3515 |
+| target_swin_t | cnn-to-transformer | 1637 | 0.0491 | 0.0282 | +0.3272 |
+
+Đối chiếu quick-test n=50 trước đó (r101: 0.1332/0.0981/corr=0.2398; convnext: 0.0919/0.0508/corr=0.3560; swin: 0.0519/0.0297/corr=0.3167) — **sai lệch <0.02 ở mọi ô, pattern hoàn toàn ổn định**, không phải nhiễu mẫu nhỏ.
+
+**Kết luận**: gradient alignment giải thích được transfer gap ở cả 2 mức — (1) per-object: cos_sim cao hơn ở nhóm evaded so với not-evaded, correlation dương ổn định ~0.32-0.35 ở cả 3 target; (2) per-target: độ lớn cos_sim tổng thể giảm đơn điệu đúng thứ tự kiến trúc, khớp hoàn toàn thứ tự ASR đã biết. Chuỗi `Architecture family → gradient alignment → transfer success` được xác nhận thực nghiệm — chuyển từ "empirical transfer gap" (Exp1/1B) sang **mechanistic explanation** đầu tiên của dự án.
+
+### Bước tiếp theo
+
+1. ~~(Tùy chọn, nếu cần rigor cho paper) Chạy test thống kê chính thức (Mann-Whitney U) trên distribution cos_sim evaded vs not-evaded thay vì chỉ so mean/std.~~ Đã làm — xem entry dưới.
+2. ~~Theo quy tắc rẽ nhánh đã chốt: xuống **feature-level alignment** (research_plan.md §7.B) — tìm layer nào trong backbone gây divergence nhiều nhất giữa surrogate và từng target.~~ Đã làm (Thí nghiệm 2B + 2B.1) — xem entry dưới, kết quả là **negative finding**.
+3. Cân nhắc chạy Thí nghiệm 2A ở n=1000 khi cần số liệu final cho paper (hiện tại n=300 đã đủ làm milestone/confirm).
+
+## 2026-09-20 — Thí nghiệm 2A bổ sung (Mann-Whitney U), Thí nghiệm 2B + 2B.1: feature-level alignment KHÔNG giải thích được transfer success (negative finding)
+
+### Bổ sung Thí nghiệm 2A: Mann-Whitney U + effect size
+
+Thêm vào `experiments/experiment2a.py` (hàm `compute_summary`, tái sử dụng qua `--reanalyze` không cần chạy lại GPU): Mann-Whitney U một phía (H1: cos_sim nhóm evaded > not-evaded) + 2 effect size (rank-biserial — chuẩn cho Mann-Whitney; Cohen's d — tham khảo). Bug nhỏ tự bắt trước khi báo cáo: công thức rank-biserial `1 - 2U/(n1n2)` cho dấu NGƯỢC (verify bằng ví dụ tổng hợp x>>y phải cho r=+1 nhưng công thức đó ra -1) — sửa thành `2U/(n1n2) - 1`.
+
+Kết quả (n=300, dùng lại `records.jsonl` đã có, không cần GPU):
+
+| Target | MWU p-value (1 phía) | rank-biserial | Cohen's d |
+|---|---|---|---|
+| target_r101 | 5.62e-43 | +0.4470 | 0.7372 |
+| target_convnext_t | 8.34e-53 | +0.4299 | 0.7536 |
+| target_swin_t | 8.30e-42 | +0.3984 | 0.7158 |
+
+p cực nhỏ, effect size trung bình-lớn (rank-biserial ~0.40-0.45, Cohen's d ~0.72-0.75) ở cả 3 target — chốt chính thức được thống kê cho kết luận 2A (gradient alignment cao hơn ở nhóm evaded).
+
+### Thí nghiệm 2B: global CKA theo stage — negative finding so với hypothesis
+
+Thiết kế (research_plan.md §7.B): với mỗi stage backbone (S1-S4, verify cùng stride [4,8,16,32] ở cả 4 model dù channel dim khác — 256/512/1024/2048 ResNet vs 96/192/384/768 ConvNeXt/Swin, đây là lý do dùng **linear CKA** thay vì cosine trực tiếp), pool object-conditioned feature (RoIAlign 7x7 + global average) trên đúng population object đã dùng ở 2A (đọc từ `records.jsonl`, không generate lại attack — 2B chỉ cần ảnh sạch). Code: `experiments/experiment2b.py`.
+
+Bug kỹ thuật gặp và fix: `mmcv.ops.roi_align` (bản mmcv/torch đang dùng) không nhận keyword arguments qua `torch.autograd.Function.apply` — phải truyền toàn bộ theo thứ tự positional của `RoIAlignFunction.forward`.
+
+**Kết quả (n=300, khớp population 2A)**:
+
+| Stage | R50→R101 | R50→ConvNeXt | R50→Swin |
+|---|---|---|---|
+| Stage 1 | 0.9798 | 0.7241 | 0.8459 |
+| Stage 2 | 0.9668 | 0.7482 | 0.9299 |
+| Stage 3 | 0.9134 | 0.7548 | 0.8454 |
+| Stage 4 | 0.9387 | 0.7810 | 0.8137 |
+
+**Negative finding**: thứ tự thực tế là **R101 > Swin > ConvNeXt** ở CẢ 4 stage — không phải R101 > ConvNeXt > Swin như hypothesis (và như ASR/gradient alignment ở Exp1/1B/2A đã cho). Đã tự verify không phải bug: `linear_cka` cho self-CKA=1.0, scale-invariant, random-baseline ~0.15 (kiểm tra bằng dữ liệu tổng hợp).
+
+> **Global forward-feature similarity (CKA) không đi cùng ASR**: ASR/gradient alignment cho R101 > ConvNeXt > Swin, còn CKA cho R101 > Swin > ConvNeXt.
+
+### Thí nghiệm 2B.1: trong-từng-target, evaded vs not-evaded — vẫn negative finding, nhưng theo hướng ngược lại thú vị
+
+Câu hỏi hẹp hơn: TRONG CÙNG 1 target (không so target với nhau), object evaded có CKA với surrogate cao hơn object not-evaded không? Tái sử dụng raw feature đã lưu ở `outputs/experiment2b/features/*.npz` (đã sửa `experiment2b.py` lưu thêm nhãn evaded per-object, không cần forward lại). So sánh bằng bootstrap (n_sample = min(n_evaded, n_not_evaded), resample có hoàn lại, B=200 — ban đầu thử B=1000 với công thức CKA kiểu cross-covariance (D×D), ước tính chạy ~70 phút (D=2048 ở stage sâu quá đắt, benchmark thực tế 1.5s/lần gọi) → đã dừng, đổi sang công thức CKA qua Gram matrix (N×N), verify cho ra cùng kết quả nhưng nhanh hơn tới 8.5x ở D=2048, giảm B xuống 200, tổng chạy còn ~13 phút). Code: `experiments/experiment2b1.py`.
+
+**Kết quả đầy đủ (12 tổ hợp target×stage)**:
+
+| Target | Stage | CKA(evaded) | CKA(not evaded) | diff | CI95 non-overlap |
+|---|---|---|---|---|---|
+| ConvNeXt | 1 | 0.7234 | 0.7437 | −0.0203 | |
+| ConvNeXt | 2 | 0.7519 | 0.7625 | −0.0106 | |
+| ConvNeXt | 3 | 0.7721 | 0.7988 | −0.0268 | |
+| ConvNeXt | 4 | 0.7785 | 0.8242 | **−0.0458** | ★ |
+| R101 | 1 | 0.9803 | 0.9802 | +0.0002 | |
+| R101 | 2 | 0.9681 | 0.9656 | +0.0025 | |
+| R101 | 3 | 0.9217 | 0.9401 | −0.0184 | |
+| R101 | 4 | 0.9376 | 0.9626 | **−0.0250** | ★ |
+| Swin | 1 | 0.8571 | 0.8439 | +0.0132 | |
+| Swin | 2 | 0.9216 | 0.9387 | **−0.0171** | ★ |
+| Swin | 3 | 0.8564 | 0.8661 | −0.0098 | |
+| Swin | 4 | 0.8133 | 0.8476 | **−0.0343** | ★ |
+
+**Phát hiện**: ở stage 4 (sâu nhất), **cả 3 target** đều có `CKA_evaded < CKA_not_evaded` với CI95 không chồng lấp — NGƯỢC hoàn toàn với hướng hypothesis đặt ra (`CKA_evaded > CKA_not_evaded`).
+
+### Interpretation đã chốt (user, 2026-09-20)
+
+- **Bác bỏ hypothesis "forward feature similarity cao → transfer dễ hơn"** — dữ liệu nói điều ngược lại ở deep stage, nhất quán qua cả 3 target.
+- Deep CKA có vẻ phản ánh **object representation stability/canonicality** (object nào 2 model "nhìn" giống nhau ở mức biểu diễn cao thường là object rõ ràng/tự tin, khó bị đánh bật bởi 1 nhiễu bounded-epsilon) hơn là **compatibility của adversarial direction** giữa 2 model.
+- Tính đến giờ, **gradient alignment (2A) là tín hiệu giải thích transfer success tốt hơn hẳn raw feature alignment (2B/2B.1)** — 2A đi đúng chiều hypothesis (cos_sim cao hơn ở nhóm evaded, p cực nhỏ, effect size trung bình-lớn), còn feature-level alignment thì không, thậm chí đi ngược ở deep layer.
+- **Lưu ý phương pháp luận cho paper sau này**: "CI95 không chồng lấp" ở 2B.1 là bằng chứng đủ mạnh để BÁO CÁO Ở ĐÂY (progress_log, giai đoạn khám phá), nhưng KHÔNG nên gọi là "formal significance test" khi viết paper — nên dùng trực tiếp bootstrap CI của hiệu số `CKA_evaded - CKA_not` (paired trong cùng resample, không phải 2 CI độc lập rồi so sánh chồng lấp), hoặc permutation test, mới đúng chuẩn thống kê.
+
+### Bước tiếp theo: chuyển sang backward information (feature-gradient / Jacobian alignment)
+
+Không cố ép "forward feature similarity" vào chuỗi cơ chế nữa. Câu hỏi mới cho Thí nghiệm tiếp theo (tạm gọi 2C):
+
+> Ở stage nào, backward sensitivity (Jacobian của feature đối với input, hoặc feature-gradient) của surrogate và target bắt đầu diverge theo đúng thứ tự R101 > ConvNeXt > Swin (khớp ASR/gradient alignment đã biết)?
+
+Nếu tìm được, chuỗi cơ chế trở thành:
+
+```
+Architecture → Backward sensitivity divergence → Gradient misalignment → Transfer failure
+```
+
+thay vì cố dùng forward feature similarity (đã bị bác bỏ ở 2B/2B.1) làm mắt xích giữa kiến trúc và gradient misalignment.
+
+## 2026-09-20 — Thí nghiệm 2C: backward sensitivity (feature-gradient) theo stage — finding mạnh nhất của Exp2, khớp đúng thứ tự ASR
+
+### Thiết kế
+
+Câu hỏi: khác biệt giữa forward feature similarity (2B, sai thứ tự) và gradient alignment tại RoI cuối (2A, đúng thứ tự) bắt đầu từ đâu trong mạng? Với mỗi object, tại mỗi stage backbone (S1-S4), pool feature (RoIAlign 7x7 + global average, giống 2B), lấy scalar = ||f^l(x)||₂² (tổng bình phương feature — lựa chọn tự nhiên, không cần projection ngẫu nhiên tùy tiện, không cần nhãn), backprop về ảnh SẠCH (không chạy attack, giống 2B) ra gradient trong không gian pixel input, so cos similarity giữa surrogate và target — cùng population object đã dùng ở 2A/2B. Code: `experiments/experiment2c.py`. Không gặp bug kỹ thuật mới (tái sử dụng đúng các helper đã verify ở 2A/2B: `_gt_bboxes_net` cho tọa độ RoI, `roi_align` positional args).
+
+### Kết quả (n=300, 19420 record)
+
+| Stage | R50→R101 | R50→ConvNeXt | R50→Swin | Khớp thứ tự R101>ConvNeXt>Swin? |
+|---|---|---|---|---|
+| Stage 1 (shallow) | 0.3285 | 0.0676 | 0.0713 | ✗ (Swin nhỉnh hơn ConvNeXt, sát nhau) |
+| Stage 2 | 0.2926 | −0.0870 | −0.0835 | ✗ (cả 2 âm, Swin nhỉnh hơn nhẹ) |
+| **Stage 3** | 0.1330 | **0.0296** | **−0.0145** | **✓ ĐÚNG** |
+| **Stage 4 (deep)** | 0.1062 | **0.0438** | **−0.0032** | **✓ ĐÚNG** |
+
+Thêm: within mỗi target, `mean_cos_sim(evaded) > mean_cos_sim(not_evaded)` giữ đúng ở hầu hết mọi stage/target — nhất quán với phát hiện 2A (chi tiết per-object trong `outputs/experiment2c/records.jsonl`).
+
+### Kết luận đã chốt (user, 2026-09-20) — finding mạnh nhất của Exp2 tính đến giờ
+
+> **Experiment 2C confirms that cross-family transferability is better explained by backward sensitivity alignment than by forward feature similarity.** Forward CKA in Exp2B failed to follow the ASR ordering, while feature-gradient alignment in Exp2C recovers the correct `R101 > ConvNeXt > Swin` ordering from Stage 3 onward. This suggests that the critical divergence emerges in mid-to-deep backbone stages and propagates into input-gradient misalignment, which then limits transfer success.
+
+Chuỗi cơ chế nâng cấp từ bản nháp ở entry trước:
+
+$$
+\boxed{Architecture \rightarrow \text{mid/deep backward-sensitivity divergence (từ Stage 3)} \rightarrow \text{input-gradient misalignment} \rightarrow \text{transfer failure}}
+$$
+
+Giữ nguyên negative finding của 2B/2B.1 làm 1 phần của story (không xóa, làm rõ tương phản):
+
+$$
+\text{forward similarity} \not\Rightarrow \text{transferability}, \quad \text{backward alignment} \Rightarrow \text{transferability}
+$$
+
+### Đánh giá: đã đủ để chuyển sang giai đoạn method (research_plan.md §8-§9), không cần đào thêm diagnostic
+
+Theo user: kết quả 2A+2B+2B.1+2C đã đủ mạnh và nhất quán (âm ở forward feature, dương và đúng thứ tự ở backward sensitivity từ stage 3) để dừng vòng lặp tìm-cơ-chế (research_plan.md §8, bước 1-6) và bắt đầu thiết kế method (bước 7). Câu hỏi trung tâm cho method, cụ thể hóa từ câu hỏi chung ở research_plan.md §9-§10:
+
+> **Làm sao từ một surrogate duy nhất giảm tính architecture-specific của backward signal tại Stage 3-4?**
+
+Đây là điểm nhắm trực tiếp cho novelty/SOTA claim (research_plan.md §10-§11), thay vì hướng chung chung "architecture-invariant object evidence disruption" đã phác thảo trước đó ở §9.
+
+### Bước tiếp theo
+
+1. ~~Cân nhắc khóa RQ2 (research_plan.md §12) với kết luận trên — chưa làm, để hỏi user riêng (giống cách RQ1 đã khóa ở entry trước).~~ Đã khóa ngay sau đó cùng ngày — xem `research_plan.md` §12: RQ2 answered (backward sensitivity alignment > forward feature similarity, divergence từ Stage 3-4), RQ3 cụ thể hóa thành câu hỏi method duy nhất còn mở.
+2. ~~Bắt đầu thiết kế method: tấn công single-surrogate nhắm trực tiếp vào backward sensitivity ở Stage 3-4 (thay vì chỉ RoI classification loss cuối như MI-FGSM hiện tại) — cần literature search cụ thể hơn cho hướng "feature-gradient/Jacobian-based attack" (research_plan.md §8 bước 1).~~ Đã làm bước cầu nối (Thí nghiệm 3A, causal intervention) trước khi thiết kế method hẳn — xem entry dưới.
+
+## 2026-09-20 — Thí nghiệm 3A: causal intervention xác nhận Stage 3-4 là nguồn tác động thật (không chỉ correlation)
+
+### Thiết kế
+
+RQ2 (đã khóa) dựa trên correlation (2A/2C: backward-sensitivity alignment đi cùng ASR, mạnh nhất từ Stage 3-4). 3A kiểm tra xem có phải quan hệ NHÂN QUẢ không: regularize (giảm variance) gradient CHÍNH XÁC tại Stage 3-4 trong lúc craft attack có tăng cross-family ASR nhiều hơn regularize ở Stage 1-2 không?
+
+Literature check trước khi implement (đúng đề xuất — search rất tập trung, không tùy tiện):
+- **TGR** (Zhang et al., CVPR 2023, "Transferable Adversarial Attacks on Vision Transformers with Token Gradient Regularization"): giảm variance gradient lan truyền ngược tại block trung gian bằng cách loại bỏ giá trị cực trị (token-wise, cho ViT Attention/QKV/MLP block).
+- **MIG** (Ma et al., ICCV 2023, "Transferable Adversarial Attack for Both Vision Transformers and Convolutional Networks via Momentum Integrated Gradients"): dùng integrated gradients (tích phân dọc đường thẳng từ baseline tới ảnh thật) thay vì gradient tại 1 điểm, vì integrated gradients tương đồng hơn giữa các model.
+
+Baseline regularizer implement — **CỐ Ý đơn giản**, mượn tinh thần TGR (clip gradient theo mean±3·std của chính nó) nhưng áp ở granularity BACKBONE STAGE (feature map) thay vì token/attention-block, để dùng thống nhất được cho cả ResNet/ConvNeXt/Swin — KHÔNG phải reimplement TGR. Cơ chế: `tensor.register_hook()` trực tiếp trên feature map stage cần regularize, đăng ký giữa lúc gọi `model.backbone(x)` và `model.neck(...)` (2 bước tách thủ công từ `extract_feat`, đúng những gì `extract_feat` làm bên trong, không đổi hành vi gì khác ngoài chèn hook). Code: `attacks/backward_reg_attack.py` (file mới, không sửa `attacks/detection_attacks.py`, tái sử dụng `_bbox_cls_loss`/`_bbox_cls_bbox_loss`/`_apply_input_diversity` từ đó).
+
+4 setting, cùng 4 model + cùng config attack (epsilon=8.0, num_iter=10, decay=1.0, objective=cls — y hệt Thí nghiệm 1), chỉ khác `reg_stages`: `baseline` (không regularize), `reg_s1s2` (Stage 1-2, nhóm đối chứng), `reg_s3s4` (Stage 3-4, hypothesis chính), `reg_all` (cả 4 stage, tham khảo). Code: `experiments/experiment3a.py`.
+
+### Kết quả (n=300)
+
+**ASR tuyệt đối:**
+
+| Target | Baseline | reg_s1s2 | reg_s3s4 | reg_all |
+|---|---|---|---|---|
+| surrogate | 0.9576 | 0.9570 | 0.9597 | 0.9610 |
+| target_r101 | 0.7102 | 0.6754 | 0.7161 | 0.6872 |
+| target_convnext_t | 0.4501 | 0.4194 | **0.4637** | 0.4312 |
+| target_swin_t | 0.3787 | 0.3519 | **0.4020** | 0.3739 |
+
+**Gain (ASR_reg − ASR_baseline):**
+
+| Target | reg_s1s2 | reg_s3s4 | reg_all |
+|---|---|---|---|
+| surrogate | −0.0007 | +0.0020 | +0.0034 |
+| target_r101 | −0.0348 | +0.0059 | −0.0230 |
+| target_convnext_t | **−0.0307** | **+0.0136** | −0.0189 |
+| target_swin_t | **−0.0269** | **+0.0232** | −0.0049 |
+
+Hypothesis `Gain_{S3-4} > Gain_{S1-2}` confirm rõ ràng ở cả 2 cross-family target (chênh lệch +0.0443 ở ConvNeXt, +0.0501 ở Swin). `reg_s1s2` luôn có hại (mọi target, kể cả same-family); `reg_s3s4` luôn có lợi. `reg_all` tệ hơn `reg_s3s4` riêng lẻ ở mọi target — không phải "càng regularize nhiều càng tốt", mà cụ thể Stage 3-4 mới có tác dụng, pha trộn với Stage 1-2 (có hại) làm loãng lợi ích.
+
+### Kết luận đã chốt (user, 2026-09-20)
+
+> **Experiment 3A provides targeted causal evidence that mid/deep backward signals are the actionable source of cross-family transferability. Regularizing Stage 3–4 consistently improves transfer to both ConvNeXt and Swin, while regularizing Stage 1–2 consistently hurts transfer. Regularizing all stages is also worse than Stage 3–4 alone, showing that the effect is stage-specific rather than a generic benefit of stronger regularization.**
+
+Điểm mạnh nhất, dùng để bác bỏ giải thích "regularization nói chung giúp transfer":
+
+$$
+reg_{S3-4} > baseline > reg_{S1-2}
+$$
+
+ở cả 2 cross-family target, và:
+
+$$
+reg_{all} < reg_{S3-4}
+$$
+
+### Trạng thái RQ3: bằng chứng feasibility rất mạnh, CHƯA khóa hoàn toàn
+
+Khác với RQ1/RQ2 (đã khóa), RQ3 chưa khóa vì 3A mới là intervention đơn giản (baseline regularizer mượn tinh thần TGR), chưa phải method novel/SOTA — chỉ đủ để xác nhận feasibility (backward signal ở Stage 3-4 CÓ THỂ can thiệp được để tăng cross-family transfer, và hiệu ứng có tính causal, cụ thể theo stage). Roadmap tiếp theo:
+
+$$
+\boxed{\text{Search prior methods} \rightarrow \text{identify overlap} \rightarrow \text{design novel stage-aware backward regularization}}
+$$
+
+Định hướng novelty cụ thể: **Stage 3-4 được chọn dựa trên backward-sensitivity evidence** (đo được, không phải chọn heuristic/toàn mạng như TGR) — phân biệt với TGR (không có bước "đo để chọn stage", áp dụng toàn bộ ViT block) và với OSFD (AAAI, phá forward object feature — hướng của dự án này nhắm backward sensitivity geometry, khác hẳn). Có thể mạnh hơn nữa nếu thêm **object-conditioned weighting** vào Stage 3-4 (hợp tự nhiên với object detection, khác classification-only literature hiện có).
+
+### Bước tiếp theo
+
+1. ~~Literature search tập trung hơn nữa cho các method "stage-aware"/"layer-selection" backward regularization đã có (để xác định overlap thật, tránh trùng lặp khi claim novelty).~~ Đã làm — xem entry dưới (TGR, MIG, PAS — Backpropagation Path Search ICCV 2023, GRA — Gradient Relevance Attack ICCV 2023, OSFD).
+2. ~~Thiết kế method chính thức: attack single-surrogate kết hợp (a) regularize backward signal tại Stage 3-4 (đã validate ở 3A) + (b) object-conditioned weighting (research_plan.md §9).~~ Đã làm bước cầu nối (Thí nghiệm 3B) — xem entry dưới.
+3. Benchmark method mới so với baseline hiện có (MI-FGSM, DI-FGSM đã có ở Thí nghiệm 1B) + OSFD/TGR/MIG nếu tái lập được, theo đúng threat model research_plan.md §11.
+
+## 2026-09-20 — Thí nghiệm 3B: object-conditioned weighting + literature overlap check — candidate method bắt đầu có cấu trúc rõ ràng
+
+### Literature overlap check (trước khi implement 3B)
+
+Search tập trung các method "chỉnh backward path/gradient" gần nhất với hướng Stage 3-4 + object-conditioned:
+- **TGR** (CVPR 2023): regularize variance gradient ở intermediate block của ViT (token-wise, Attention/QKV/MLP) — không có bước đo backward sensitivity để CHỌN stage, không phải object detection.
+- **MIG** (ICCV 2023): dùng integrated gradients thay gradient tại 1 điểm — không chọn stage, không object-conditioned.
+- **PAS — Backpropagation Path Search** (Xu et al., ICCV 2023): search DAG/backprop path để giảm surrogate overfitting — gần nhất về ý tưởng "chỉnh backward path", nhưng classification-centric, không dùng mechanism diagnostic kiểu Stage 3-4 (đo rồi mới chọn).
+- **GRA — Gradient Relevance Attack** (Zhu et al., ICCV 2023): chỉnh gradient update dựa trên relevance/neighborhood fluctuation — không stage-aware.
+- **OSFD** (AAAI 2024): object-detection-specific, transferable mạnh, nhưng thao tác **forward object feature**, không phải backward sensitivity geometry — hướng khác hẳn.
+
+Kết luận overlap: không method nào có ĐỦ 2 đặc điểm cùng lúc — (1) chọn stage dựa trên đo backward-sensitivity evidence thay vì heuristic/toàn mạng, (2) object-conditioned cho object detection. Đây là khoảng trống thật, nhưng claim novelty phải chính xác ở mức "mechanism-guided stage selection + object-conditioned backward regularization", KHÔNG phải "we regularize intermediate gradients" (đã có TGR/PAS/GRA làm rồi dưới hình thức khác).
+
+### Thiết kế 3B
+
+Câu hỏi: object-aware weighting có giúp backward regularization tập trung vào transferable object-sensitive directions thay vì regularize toàn feature map như nhau không? 4 setting, cùng model/attack config (epsilon=8.0, num_iter=10, decay=1.0, objective=cls) như 3A:
+- `baseline`: không regularize.
+- `reg_s3s4`: clip variance ĐỀU tại Stage 3-4 (y hệt 3A, mốc tham chiếu).
+- `object_weight_only`: CHỈ nhân gradient với mask object (1.0 trong vùng GT box theo stride của stage, 0.3 ngoài — hard box, không làm mượt biên, đủ cho kiểm tra targeted) tại Stage 3-4, KHÔNG clip.
+- `reg_s3s4_object_weight`: clip NHƯNG chỉ áp trong vùng object (blend theo mask với gradient gốc bên ngoài).
+
+Code: mở rộng `attacks/backward_reg_attack.py` (thêm `stage_modes` dict tổng quát hơn `reg_stages` cũ của 3A, giữ tương thích ngược — đã verify baseline tái lập y hệt trước/sau refactor) + `experiments/experiment3b.py`.
+
+**Phát hiện kỹ thuật quan trọng khi verify trước khi chạy n=300**: setting có `tensor.register_hook` cho kết quả dao động nhẹ giữa các lần chạy CÙNG 1 code (baseline luôn tái lập y hệt tuyệt đối vì không có hook) — nondeterminism của GPU/cudnn khi có backward hook, không phải bug logic. Ở n=300 hiệu ứng này nhỏ đi nhiều so với n=5 lúc sanity-test (dao động 1-2 object trên 26-30 object ở n=5 là đáng kể, nhưng trên ~1500-1700 object ở n=300 thì không đủ để đảo ngược kết luận). Cần lưu ý khi tái lập chính xác tuyệt đối kết quả (paper sau này nên cân nhắc tắt `cudnn.benchmark`/ép deterministic algorithm nếu cần reproducibility bit-exact).
+
+### Kết quả (n=300)
+
+**ASR tuyệt đối:**
+
+| Target | Baseline | reg_s3s4 | object_weight_only | reg_s3s4_object_weight |
+|---|---|---|---|---|
+| surrogate | 0.9570 | 0.9610 | 0.9597 | 0.9644 |
+| target_r101 | 0.7128 | 0.7167 | 0.7115 | 0.7128 |
+| target_convnext_t | 0.4542 | 0.4649 | 0.4460 | **0.4702** |
+| target_swin_t | 0.3794 | 0.3965 | 0.3800 | **0.4013** |
+
+**Gain (so với baseline):**
+
+| Target | reg_s3s4 | object_weight_only | reg_s3s4_object_weight |
+|---|---|---|---|
+| target_r101 | +0.0039 | −0.0013 | +0.0000 |
+| target_convnext_t | +0.0106 | −0.0083 | **+0.0159** |
+| target_swin_t | +0.0171 | +0.0006 | **+0.0220** |
+
+### Kết luận đã chốt (user, 2026-09-20)
+
+- **`Stage 3-4 regularization` (clip) là thành phần chính tạo gain cross-family** — `object_weight_only` (chỉ mask, không clip) tự nó không có tác dụng, thậm chí hơi có hại ở ConvNeXt (−0.0083).
+- **`Object weighting` một mình không đủ, nhưng có interaction DƯƠNG khi kết hợp với Stage 3-4 regularization**: combo (`reg_s3s4_object_weight`) vượt rõ `reg_s3s4` thuần ở cả 2 cross-family target (ConvNeXt +0.0159 vs +0.0106 — tăng thêm ~50%; Swin +0.0220 vs +0.0171 — tăng thêm ~29%).
+- **Combo cải thiện ConvNeXt/Swin nhưng gần như không cải thiện R101** (gain=+0.0000, thấp hơn cả `reg_s3s4` riêng +0.0039) → tín hiệu rất tốt rằng method đang nhắm đúng vào **cross-family gap**, không chỉ tăng attack strength chung chung (nếu là hiệu ứng chung, same-family phải tăng theo tỷ lệ tương tự).
+
+### Trạng thái: candidate method đã có cấu trúc rõ ràng — KHÔNG thêm component mới ngay
+
+Công thức method (3 thành phần, đã validate từng phần qua 3A+3B):
+1. **Stage-selection rule**: chọn Stage 3-4, dựa trên backward-sensitivity evidence đo được ở Thí nghiệm 2C (không phải heuristic/toàn mạng như literature hiện có).
+2. **Backward regularizer**: clip variance (tinh thần TGR, adapt sang backbone-stage granularity).
+3. **Object-conditioned weighting**: giới hạn regularizer vào vùng object (tương tác dương với #2, không có tác dụng đứng một mình).
+
+Roadmap tiếp theo:
+
+$$
+\boxed{\text{formalize method} \rightarrow \text{ablation/parameter study} \rightarrow \text{strong baselines} \rightarrow \text{full benchmark}}
+$$
+
+### Bước tiếp theo
+
+1. ~~Chốt rõ công thức method (đặt tên, viết formal description — 3 thành phần ở trên).~~ Đã làm — xem entry dưới (research_plan.md §9.1).
+2. ~~Ablation/parameter study: `OBJECT_MASK_BG_WEIGHT` hiện đang hard-code 0.3 (chưa tune), mask hiện là hard box (chưa thử soft/Gaussian falloff), clip bound hiện 3·std (chưa thử giá trị khác) — cần xem độ nhạy trước khi chốt method cuối.~~ Ablation A (clip bound k) đã làm — xem entry dưới. Ablation B (λ) và C (mask shape) còn lại.
+3. Strong baseline: benchmark với TGR/MIG/OSFD/DI-FGSM (đã có DI-FGSM từ Thí nghiệm 1B) để biết candidate này thực sự SOTA hay chỉ hơn baseline nội bộ.
+4. Full benchmark theo đúng threat model research_plan.md §11 (cùng dataset, cùng budget, cùng surrogate/target).
+
+## 2026-09-20 — Formalize Method v0.1 (research_plan.md §9.1) + Ablation A (clip bound k)
+
+### Formalize method v0.1
+
+Trước khi ablation, chốt công thức chính xác khớp code (không viết "đẹp hơn" implementation — quy tắc user đặt ra). Full công thức ở `docs/research_plan.md` §9.1. Tóm tắt: với stage \(l \in \mathcal{S}^*=\{3,4\}\),
+
+\[
+\hat g_l = M_l \odot \operatorname{clip}(g_l;\ \mu_l-k\sigma_l,\ \mu_l+k\sigma_l) + (1-M_l)\odot g_l
+\]
+
+— convex blend per-pixel giữa gradient đã clip và gradient gốc theo mask object \(M_l\) (KHÔNG phải multiplicative `M⊙clip(g)` hay residual `(1+λM)⊙clip(g)` như phác thảo ban đầu của user — đã tự sửa sau khi đối chiếu code thật). Refactor `attacks/backward_reg_attack.py`: tổng quát hóa 2 hằng số hard-code thành tham số `k` (clip bound) và `lam` (λ, object-weight strength qua β(λ)=1/(1+λ)) — verify bằng unit test: λ=0 khớp TUYỆT ĐỐI (max diff=0.0) với `reg_s3s4` thuần. λ mặc định ≈2.333 tái lập đúng β=0.3 đã dùng ở 3B.
+
+### ⚠️ Sự cố: ghi đè nhầm `outputs/experiment3b/results.json` (n=300 → n=5)
+
+Khi chạy regression sanity-test sau refactor (`python3 experiments/experiment3b.py 5`), script ghi đè thẳng `results.json` mà không hỏi/backup — mất bản n=300 gốc của Thí nghiệm 3B (chỉ còn n=5). Phát hiện MUỘN, sau khi `experiments/experiment3c.py` (Ablation A) đã đọc nhầm 3 điểm "reused" (baseline/no-clip/k3_original) từ file đã hỏng, in ra bảng sai (số n=5 lẫn với số n=300 mới của k1/k2/k4). **Bài học lặp lại (đã từng nhắc ở entry Thí nghiệm 1, "backup trước khi ghi đè")**: quy tắc đó áp dụng cho MỌI lần chạy lại 1 script có khả năng ghi đè `results.json`, kể cả khi mục đích chỉ là "sanity-test nhanh sau khi sửa code" — không có ngoại lệ. Cách khắc phục đã dùng: 3 điểm reused có số liệu ĐÚNG đã ghi sẵn ở entry Thí nghiệm 3B phía trên (progress_log.md, không phụ thuộc file kết quả) — dùng lại để patch thủ công `outputs/experiment3c/results.json` mà không cần chạy lại GPU. `outputs/experiment3b/results.json` (file gốc) vẫn còn sai (n=5) — CẦN chạy lại `experiments/experiment3b.py 300` nếu sau này cần dùng file đó trực tiếp (hiện tại không cấp thiết vì số liệu đã bảo toàn trong progress_log.md).
+
+### Ablation A: sweep clip bound k ∈ {1,2,3(gốc+lặp lại),4}, cố định λ≈2.333/β=0.3, Stage {3,4}, mode clip_weight
+
+Tái sử dụng 3 điểm từ Thí nghiệm 3B (baseline, no-clip=`object_weight_only`, k=3 gốc=`reg_s3s4_object_weight`), chỉ chạy mới k=1, k=2, k=4, và 1 bản lặp lại k=3 (đo noise floor). Code: `experiments/experiment3c.py`.
+
+**Kết quả (n=300):**
+
+| Setting | ConvNeXt | Swin | CrossAvg | R101 | WhiteBox | TransferGap |
+|---|---|---|---|---|---|---|
+| baseline | 0.4542 | 0.3794 | 0.4168 | 0.7128 | 0.9570 | +0.2960 |
+| no-clip | 0.4460 | 0.3800 | 0.4130 | 0.7115 | 0.9597 | +0.2985 |
+| k=1 | 0.4578 | 0.4032 | 0.4305 | 0.7161 | 0.9657 | +0.2856 |
+| k=2 | 0.4589 | 0.4020 | 0.4305 | 0.7102 | 0.9623 | +0.2797 |
+| k=3 (gốc) | 0.4702 | 0.4013 | **0.4357** | 0.7128 | 0.9644 | **+0.2771** |
+| k=3 (lặp lại) | 0.4690 | 0.4007 | 0.4349 | 0.7108 | 0.9637 | +0.2760 |
+| k=4 | 0.4613 | 0.3958 | 0.4286 | 0.7154 | 0.9630 | +0.2868 |
+
+### Kết luận đã chốt (user, 2026-09-20)
+
+1. **k=3 đạt CrossAvg tốt nhất (0.4357/0.4349) và TransferGap thấp nhất (+0.2771/+0.2760)** trong toàn bộ sweep.
+2. **Curve theo k có dạng non-monotonic**: sắp theo CrossAvg tăng dần — no-clip (0.4130) < baseline (0.4168) < k=4 (0.4286) < k=1≈k=2 (0.4305) < k=3 (đỉnh). Cả clip mạnh hơn (k=1,2) lẫn yếu hơn (k=4) đều kém hơn k=3.
+3. **R101 (0.710-0.716) và white-box (0.957-0.966) gần như phẳng qua mọi k** — cải thiện cross-family ở k=3 KHÔNG đến từ đánh đổi source/same-family.
+4. **Replicate k=3 cho sai khác rất nhỏ**: ΔCrossAvg=0.0008, ΔTransferGap=0.0011.
+
+**Diễn đạt cẩn trọng (sửa lại theo yêu cầu user — tránh overclaim thống kê)**: KHÔNG viết "chênh lệch k=1/2/4 so với k=3 là khác biệt thật, không phải nhiễu". Viết đúng hơn:
+
+> Chênh lệch giữa k=3 và các giá trị k lân cận (~0.005-0.007 ở CrossAvg) lớn hơn nhiều so với **observed run-to-run numerical variation** của replicate k=3 (~0.0008-0.0011). Một replicate DUY NHẤT chỉ đo được numerical/run-to-run noise tại đúng 1 điểm (k=3) — CHƯA thay thế được bootstrap CI hay statistical test thật trên n=300 (nếu cần rigor cho paper, nên chạy nhiều seed/replicate ở mọi k, không chỉ k=3).
+
+**Finding riêng đáng chú ý** (mechanism story mạnh hơn):
+
+\[
+\text{no-clip} = 0.4130 < \text{baseline} = 0.4168
+\]
+
+Object-weighted backward modification MÀ KHÔNG có clipping **không tạo improvement** (thậm chí thấp hơn cả không làm gì). Improvement chỉ xuất hiện khi CÓ clipping, và đạt cực đại ở mức clipping trung gian (k=3). Tóm gọn:
+
+\[
+\text{backward modification alone} \not\Rightarrow \text{better transfer}, \qquad \text{properly bounded backward sensitivity} \Rightarrow \text{better cross-family transfer}
+\]
+
+### Bước tiếp theo
+
+1. **Ablation B**: sweep λ (object-weight strength), cố định k=3 (đã xác nhận tối ưu ở Ablation A). Trả lời câu hỏi còn lại: object-region weighting có thực sự cần thiết không (so với chỉ clip đều, không weighting — đã có data point này = `reg_s3s4` từ 3A/3B, λ→"đồng nhất"), và strength bao nhiêu là hợp lý?
+2. Sau Ablation B mới tới Ablation C (mask shape).
+3. **Nhắc lại quy tắc quan trọng**: mọi lần chạy lại script để sanity-test/regression-check PHẢI backup `results.json` hiện có trước nếu file đó chứa dữ liệu n=300 có giá trị — không có ngoại lệ dù chỉ chạy n nhỏ.

@@ -1,0 +1,216 @@
+{
+  "n_boot": 200,
+  "seed": 42,
+  "results": {
+    "target_convnext_t": {
+      "stage1": {
+        "n_evaded_total": 768,
+        "n_not_evaded_total": 925,
+        "n_sample_matched": 768,
+        "cka_evaded_mean": 0.7233987131940163,
+        "cka_evaded_ci95": [
+          0.7057801903229572,
+          0.7397087696324087
+        ],
+        "cka_not_evaded_mean": 0.7437402308335757,
+        "cka_not_evaded_ci95": [
+          0.7184782349733374,
+          0.769590059292461
+        ],
+        "diff_evaded_minus_not": -0.02034151763955938,
+        "ci95_non_overlap": false
+      },
+      "stage2": {
+        "n_evaded_total": 768,
+        "n_not_evaded_total": 925,
+        "n_sample_matched": 768,
+        "cka_evaded_mean": 0.7518835175967672,
+        "cka_evaded_ci95": [
+          0.7292916433883684,
+          0.7714238699018833
+        ],
+        "cka_not_evaded_mean": 0.7624979859911023,
+        "cka_not_evaded_ci95": [
+          0.7262740635964341,
+          0.7868422736893416
+        ],
+        "diff_evaded_minus_not": -0.010614468394335108,
+        "ci95_non_overlap": false
+      },
+      "stage3": {
+        "n_evaded_total": 768,
+        "n_not_evaded_total": 925,
+        "n_sample_matched": 768,
+        "cka_evaded_mean": 0.7720799181713633,
+        "cka_evaded_ci95": [
+          0.7543424526289885,
+          0.7944894186966955
+        ],
+        "cka_not_evaded_mean": 0.7988472714293721,
+        "cka_not_evaded_ci95": [
+          0.7826121201761115,
+          0.8155253467544502
+        ],
+        "diff_evaded_minus_not": -0.02676735325800872,
+        "ci95_non_overlap": false
+      },
+      "stage4": {
+        "n_evaded_total": 768,
+        "n_not_evaded_total": 925,
+        "n_sample_matched": 768,
+        "cka_evaded_mean": 0.7784599217474208,
+        "cka_evaded_ci95": [
+          0.7665425164696953,
+          0.7923422115301986
+        ],
+        "cka_not_evaded_mean": 0.8242436895920204,
+        "cka_not_evaded_ci95": [
+          0.8117799333648893,
+          0.8354927544142224
+        ],
+        "diff_evaded_minus_not": -0.04578376784459959,
+        "ci95_non_overlap": true
+      }
+    },
+    "target_r101": {
+      "stage1": {
+        "n_evaded_total": 1085,
+        "n_not_evaded_total": 440,
+        "n_sample_matched": 440,
+        "cka_evaded_mean": 0.9803374420069825,
+        "cka_evaded_ci95": [
+          0.9779206434539894,
+          0.9822995987753173
+        ],
+        "cka_not_evaded_mean": 0.9801635617060955,
+        "cka_not_evaded_ci95": [
+          0.9778819523837861,
+          0.9822842591829182
+        ],
+        "diff_evaded_minus_not": 0.00017388030088694162,
+        "ci95_non_overlap": false
+      },
+      "stage2": {
+        "n_evaded_total": 1085,
+        "n_not_evaded_total": 440,
+        "n_sample_matched": 440,
+        "cka_evaded_mean": 0.9680801801457813,
+        "cka_evaded_ci95": [
+          0.96470268497116,
+          0.9718079480230072
+        ],
+        "cka_not_evaded_mean": 0.9656094900967612,
+        "cka_not_evaded_ci95": [
+          0.9604830480284929,
+          0.9712881666484479
+        ],
+        "diff_evaded_minus_not": 0.002470690049020119,
+        "ci95_non_overlap": false
+      },
+      "stage3": {
+        "n_evaded_total": 1085,
+        "n_not_evaded_total": 440,
+        "n_sample_matched": 440,
+        "cka_evaded_mean": 0.92172494263907,
+        "cka_evaded_ci95": [
+          0.9113268686359964,
+          0.9333693966768748
+        ],
+        "cka_not_evaded_mean": 0.9401490425418639,
+        "cka_not_evaded_ci95": [
+          0.9324328345355709,
+          0.9489552212603961
+        ],
+        "diff_evaded_minus_not": -0.018424099902793922,
+        "ci95_non_overlap": false
+      },
+      "stage4": {
+        "n_evaded_total": 1085,
+        "n_not_evaded_total": 440,
+        "n_sample_matched": 440,
+        "cka_evaded_mean": 0.9375611508583127,
+        "cka_evaded_ci95": [
+          0.9302328973254816,
+          0.9443688950767439
+        ],
+        "cka_not_evaded_mean": 0.962577531161288,
+        "cka_not_evaded_ci95": [
+          0.9564046001693928,
+          0.9668580990438722
+        ],
+        "diff_evaded_minus_not": -0.02501638030297526,
+        "ci95_non_overlap": true
+      }
+    },
+    "target_swin_t": {
+      "stage1": {
+        "n_evaded_total": 610,
+        "n_not_evaded_total": 1027,
+        "n_sample_matched": 610,
+        "cka_evaded_mean": 0.8571256546943495,
+        "cka_evaded_ci95": [
+          0.8464231759886369,
+          0.8702992375237414
+        ],
+        "cka_not_evaded_mean": 0.84393792823461,
+        "cka_not_evaded_ci95": [
+          0.831878074553064,
+          0.8558846142146719
+        ],
+        "diff_evaded_minus_not": 0.013187726459739535,
+        "ci95_non_overlap": false
+      },
+      "stage2": {
+        "n_evaded_total": 610,
+        "n_not_evaded_total": 1027,
+        "n_sample_matched": 610,
+        "cka_evaded_mean": 0.9216046714180854,
+        "cka_evaded_ci95": [
+          0.9092770234599074,
+          0.9307258731358606
+        ],
+        "cka_not_evaded_mean": 0.9386586708758426,
+        "cka_not_evaded_ci95": [
+          0.9322338542150126,
+          0.9456321996207121
+        ],
+        "diff_evaded_minus_not": -0.017053999457757207,
+        "ci95_non_overlap": true
+      },
+      "stage3": {
+        "n_evaded_total": 610,
+        "n_not_evaded_total": 1027,
+        "n_sample_matched": 610,
+        "cka_evaded_mean": 0.8563532173621347,
+        "cka_evaded_ci95": [
+          0.8457005160120552,
+          0.8713623879322984
+        ],
+        "cka_not_evaded_mean": 0.8661162427447693,
+        "cka_not_evaded_ci95": [
+          0.8538615491669459,
+          0.8765176962008661
+        ],
+        "diff_evaded_minus_not": -0.009763025382634627,
+        "ci95_non_overlap": false
+      },
+      "stage4": {
+        "n_evaded_total": 610,
+        "n_not_evaded_total": 1027,
+        "n_sample_matched": 610,
+        "cka_evaded_mean": 0.8132868041339734,
+        "cka_evaded_ci95": [
+          0.800101316173114,
+          0.8286927718863644
+        ],
+        "cka_not_evaded_mean": 0.8475963871411213,
+        "cka_not_evaded_ci95": [
+          0.8332511571324531,
+          0.8610723349850028
+        ],
+        "diff_evaded_minus_not": -0.034309583007147926,
+        "ci95_non_overlap": true
+      }
+    }
+  }
+}

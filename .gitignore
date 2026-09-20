@@ -9,6 +9,7 @@ checkpoints/
 *.pth
 *.pt
 work_dirs/
+*.npz
 
 # Python
 __pycache__/

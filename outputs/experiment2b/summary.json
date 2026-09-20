@@ -1,0 +1,69 @@
+{
+  "n_images": 300,
+  "n_images_with_objects": 299,
+  "stage_strides": [
+    4,
+    8,
+    16,
+    32
+  ],
+  "roi_output_size": 7,
+  "cka_table": {
+    "stage1": {
+      "target_r101": {
+        "cka": 0.9797617577665896,
+        "n_objects": 1525
+      },
+      "target_convnext_t": {
+        "cka": 0.7241309506558151,
+        "n_objects": 1693
+      },
+      "target_swin_t": {
+        "cka": 0.8458917086287198,
+        "n_objects": 1637
+      }
+    },
+    "stage2": {
+      "target_r101": {
+        "cka": 0.9668067177495892,
+        "n_objects": 1525
+      },
+      "target_convnext_t": {
+        "cka": 0.7482447615757365,
+        "n_objects": 1693
+      },
+      "target_swin_t": {
+        "cka": 0.929913275025323,
+        "n_objects": 1637
+      }
+    },
+    "stage3": {
+      "target_r101": {
+        "cka": 0.9134430234043682,
+        "n_objects": 1525
+      },
+      "target_convnext_t": {
+        "cka": 0.7547525874892478,
+        "n_objects": 1693
+      },
+      "target_swin_t": {
+        "cka": 0.845376060714094,
+        "n_objects": 1637
+      }
+    },
+    "stage4": {
+      "target_r101": {
+        "cka": 0.938734121575131,
+        "n_objects": 1525
+      },
+      "target_convnext_t": {
+        "cka": 0.7810138576041052,
+        "n_objects": 1693
+      },
+      "target_swin_t": {
+        "cka": 0.8136837947917143,
+        "n_objects": 1637
+      }
+    }
+  }
+}
