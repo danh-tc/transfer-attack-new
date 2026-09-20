@@ -33,6 +33,7 @@ Chạy 1 lệnh, xong là có venv sẵn sàng — không cần thao tác tay n�
 | numpy | 1.26.4 (pin `<2`, ghim lại nhiều lần trong script) | mmcv/mmdet ở version trên chưa tương thích đầy đủ numpy 2.x. mmcv/mmengine và `opencv-python-headless` bản mới đều kéo theo `numpy>=2` như dependency không pin — script phải pin lại numpy sau mỗi bước có nguy cơ bị ghi đè, chốt lần cuối ngay trước verify |
 | pycocotools | mới nhất | eval COCO mAP |
 | opencv-python-headless | 4.10.0.84 (pin cứng) | đọc/ghi ảnh; bản `headless` vì server không có màn hình. Bản "mới nhất" (opencv 5.x) đòi `numpy>=2`, xung đột thẳng với numpy pin ở trên nên phải ghim lại bản 4.x cuối cùng còn tương thích. mmcv/mmengine cũng tự kéo theo `opencv-python` (bản GUI, không pin) như dependency bắt buộc của chúng — script gỡ nó và chỉ giữ bản headless, **theo đúng thứ tự uninstall trước rồi mới install** (ngược lại sẽ hỏng `cv2`, vì cả hai package ghi đè cùng thư mục `cv2/` trong site-packages và uninstall sẽ xóa nhầm file mà bản còn lại vừa ghi) |
+| tmux | apt, bản Ubuntu mặc định | Không phải dependency Python — dùng để chạy thí nghiệm dài trong session tách khỏi SSH/VSCode remote, attach lại xem tiến độ trực tiếp được thay vì chỉ tail log file. Xem docs/progress_log.md 2026-09-20 lý do chọn (không nohup+disown trần) |
 
 ## Troubleshooting
 

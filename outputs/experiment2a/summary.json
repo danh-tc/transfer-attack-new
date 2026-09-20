@@ -1,0 +1,47 @@
+{
+  "epsilon": 8.0,
+  "num_iter": 10,
+  "decay": 1.0,
+  "objective": "cls",
+  "score_thr": 0.3,
+  "iou_thr": 0.5,
+  "n_images": 300,
+  "summary": {
+    "target_r101": {
+      "family": "same-family",
+      "n_objects": 1525,
+      "n_evaded": 1085,
+      "n_not_evaded": 440,
+      "mean_cos_sim_evaded": 0.13968734505247274,
+      "mean_cos_sim_not_evaded": 0.08775340035777349,
+      "std_cos_sim_evaded": 0.07549374935956181,
+      "std_cos_sim_not_evaded": 0.05590884550132145,
+      "point_biserial_corr_cos_vs_evaded": 0.31697804709154676,
+      "mean_cos_sim_overall": 0.1247031249438382
+    },
+    "target_convnext_t": {
+      "family": "cross-cnn-family",
+      "n_objects": 1693,
+      "n_evaded": 768,
+      "n_not_evaded": 925,
+      "mean_cos_sim_evaded": 0.09053668314466752,
+      "mean_cos_sim_not_evaded": 0.052393299626222675,
+      "std_cos_sim_evaded": 0.0557028247291304,
+      "std_cos_sim_not_evaded": 0.04590388633531026,
+      "point_biserial_corr_cos_vs_evaded": 0.35145141117020917,
+      "mean_cos_sim_overall": 0.0696963820492384
+    },
+    "target_swin_t": {
+      "family": "cnn-to-transformer",
+      "n_objects": 1637,
+      "n_evaded": 610,
+      "n_not_evaded": 1027,
+      "mean_cos_sim_evaded": 0.04912611514711123,
+      "mean_cos_sim_not_evaded": 0.02822889767179122,
+      "std_cos_sim_evaded": 0.034731877643087286,
+      "std_cos_sim_not_evaded": 0.025305842710007322,
+      "point_biserial_corr_cos_vs_evaded": 0.32723725012607696,
+      "mean_cos_sim_overall": 0.03601588769008395
+    }
+  }
+}

@@ -32,7 +32,11 @@ if [ "$(id -u)" -ne 0 ]; then SUDO="sudo"; fi
 $SUDO apt-get update -qq
 # libgl1/libglib2.0-0: opencv-python cần để import trên server không có màn hình (headless).
 # ninja-build: build mmcv custom ops nhanh hơn nhiều so với không có ninja.
-$SUDO apt-get install -y -qq software-properties-common git build-essential ninja-build libgl1 libglib2.0-0
+# tmux: chạy các thí nghiệm dài (nhiều chục phút - vài giờ) trong tmux session thay vì
+# nohup+disown trần — để có thể attach lại xem tiến độ trực tiếp/tương tác (Ctrl+C) thay vì chỉ
+# tail log file. Không chống được việc nhà cung cấp GPU rental tắt hẳn máy, nhưng chống SIGHUP khi
+# mất kết nối SSH/VSCode y hệt nohup, tiện hơn hẳn khi cần theo dõi.
+$SUDO apt-get install -y -qq software-properties-common git build-essential ninja-build libgl1 libglib2.0-0 tmux
 
 PY_BIN="python${PY_VERSION_PIN}"
 if ! command -v "$PY_BIN" >/dev/null 2>&1; then

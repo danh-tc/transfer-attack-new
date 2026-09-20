@@ -8,7 +8,6 @@ data/
 checkpoints/
 *.pth
 *.pt
-outputs/
 work_dirs/
 
 # Python

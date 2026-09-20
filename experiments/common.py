@@ -145,6 +145,26 @@ def compute_asr(gt_by_image, clean_results_by_image, adv_results_by_image, iou_t
     return {"clean_correct_objects": n_clean_correct, "evaded_objects": n_evaded, "ASR": asr}
 
 
+def summarize_model_result(family, clean_map, adv_map, asr):
+    """Gộp clean/adv AP + ASR thành 1 dict summary cho 1 model, dùng chung cho experiment1.py và
+    experiment1b.py. Thêm delta tuyệt đối (delta_AP, delta_AP50) VÀ delta tương đối theo %
+    (delta_AP_pct, delta_AP50_pct = delta / clean_AP * 100) — % cần thiết để so sánh công bằng
+    giữa các model có clean AP khác xa nhau (vd ConvNeXt clean AP50=0.686 vs surrogate=0.584, xem
+    docs/model_registry.md phần confound training-recipe): cùng 1 delta tuyệt đối là mức "tàn phá"
+    khác nhau tùy baseline, delta % chuẩn hóa theo baseline của chính model đó."""
+    delta_ap = adv_map["AP"] - clean_map["AP"]
+    delta_ap50 = adv_map["AP50"] - clean_map["AP50"]
+    return {
+        "family": family,
+        "clean_AP": clean_map["AP"], "clean_AP50": clean_map["AP50"],
+        "adv_AP": adv_map["AP"], "adv_AP50": adv_map["AP50"],
+        "delta_AP": delta_ap, "delta_AP50": delta_ap50,
+        "delta_AP_pct": (delta_ap / clean_map["AP"] * 100) if clean_map["AP"] > 0 else float("nan"),
+        "delta_AP50_pct": (delta_ap50 / clean_map["AP50"] * 100) if clean_map["AP50"] > 0 else float("nan"),
+        **asr,
+    }
+
+
 def load_gt_by_image(coco_gt, img_ids):
     gt_by_image = {}
     for ann in coco_gt.loadAnns(coco_gt.getAnnIds(imgIds=img_ids)):

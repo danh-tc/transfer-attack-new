@@ -1,0 +1,70 @@
+{
+  "config": {
+    "epsilon": 8.0,
+    "num_iter": 10,
+    "decay": 1.0,
+    "score_thr": 0.3,
+    "iou_thr": 0.5,
+    "n_images": 300,
+    "subset_file": "configs/coco_val2017_subset_1000.json",
+    "attack": "MI-FGSM (momentum L_inf) tr\u00ean objective ki\u1ec3u DAG (RoI c\u1ee7a GT box) \u2014 attacks/mi_fgsm.py"
+  },
+  "summary": {
+    "surrogate_r50": {
+      "family": "surrogate",
+      "clean_AP": 0.40214970056598165,
+      "clean_AP50": 0.5815186154776165,
+      "adv_AP": 0.0029643776811701856,
+      "adv_AP50": 0.004762917626978778,
+      "delta_AP": -0.39918532288481146,
+      "delta_AP50": -0.5767556978506377,
+      "delta_AP_pct": -99.26286711714613,
+      "delta_AP50_pct": -99.18095182162537,
+      "clean_correct_objects": 1487,
+      "evaded_objects": 1421,
+      "ASR": 0.9556153328850033
+    },
+    "target_r101": {
+      "family": "same-family",
+      "clean_AP": 0.4246838066710126,
+      "clean_AP50": 0.6099123973190939,
+      "adv_AP": 0.06151657055013714,
+      "adv_AP50": 0.09452525287871709,
+      "delta_AP": -0.3631672361208754,
+      "delta_AP50": -0.5153871444403768,
+      "delta_AP_pct": -85.51473600268639,
+      "delta_AP50_pct": -84.50183119834776,
+      "clean_correct_objects": 1525,
+      "evaded_objects": 1086,
+      "ASR": 0.7121311475409836
+    },
+    "target_convnext_t": {
+      "family": "cross-cnn-family",
+      "clean_AP": 0.5017838229929528,
+      "clean_AP50": 0.7085635343803154,
+      "adv_AP": 0.21613459910025118,
+      "adv_AP50": 0.3164665707874571,
+      "delta_AP": -0.2856492238927016,
+      "delta_AP50": -0.3920969635928583,
+      "delta_AP_pct": -56.92675028639043,
+      "delta_AP50_pct": -55.33688153113502,
+      "clean_correct_objects": 1693,
+      "evaded_objects": 765,
+      "ASR": 0.4518606024808033
+    },
+    "target_swin_t": {
+      "family": "cnn-to-transformer",
+      "clean_AP": 0.4655712883321552,
+      "clean_AP50": 0.6810912557841304,
+      "adv_AP": 0.24149014564315996,
+      "adv_AP50": 0.3606722990341272,
+      "delta_AP": -0.22408114268899526,
+      "delta_AP50": -0.32041895675000326,
+      "delta_AP_pct": -48.13036119382168,
+      "delta_AP50_pct": -47.04493766861088,
+      "clean_correct_objects": 1637,
+      "evaded_objects": 616,
+      "ASR": 0.37629810629199756
+    }
+  }
+}

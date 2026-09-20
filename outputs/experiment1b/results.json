@@ -1,0 +1,291 @@
+{
+  "epsilon": 8.0,
+  "num_iter": 10,
+  "n_images": 300,
+  "runs": {
+    "runB_mi_fgsm_zoo": {
+      "desc": "MI-FGSM cls-only, model zoo m\u1edf r\u1ed9ng (6 model, ki\u1ec3m tra model-strength confound)",
+      "decay": 1.0,
+      "objective": "cls",
+      "input_diversity": false,
+      "summary": {
+        "surrogate_r50": {
+          "family": "surrogate",
+          "clean_AP": 0.40214970056598165,
+          "clean_AP50": 0.5815186154776165,
+          "adv_AP": 0.003611453811039923,
+          "adv_AP50": 0.005975792541649959,
+          "delta_AP": -0.3985382467549417,
+          "delta_AP50": -0.5755428229359666,
+          "delta_AP_pct": -99.10196282479951,
+          "delta_AP50_pct": -98.97238155708192,
+          "clean_correct_objects": 1487,
+          "evaded_objects": 1422,
+          "ASR": 0.9562878278412912
+        },
+        "target_r101": {
+          "family": "same-family",
+          "clean_AP": 0.4246838066710126,
+          "clean_AP50": 0.6099123973190939,
+          "adv_AP": 0.060309446508839966,
+          "adv_AP50": 0.09300532330096768,
+          "delta_AP": -0.3643743601621726,
+          "delta_AP50": -0.5169070740181262,
+          "delta_AP_pct": -85.79897665946102,
+          "delta_AP50_pct": -84.75103577009124,
+          "clean_correct_objects": 1525,
+          "evaded_objects": 1080,
+          "ASR": 0.7081967213114754
+        },
+        "target_convnext_t": {
+          "family": "cross-cnn-family",
+          "clean_AP": 0.5017838229929528,
+          "clean_AP50": 0.7085635343803154,
+          "adv_AP": 0.21655535009019172,
+          "adv_AP50": 0.3134555085787844,
+          "delta_AP": -0.28522847290276104,
+          "delta_AP50": -0.395108025801531,
+          "delta_AP_pct": -56.84289923925405,
+          "delta_AP50_pct": -55.76183456111363,
+          "clean_correct_objects": 1693,
+          "evaded_objects": 767,
+          "ASR": 0.45304193738924986
+        },
+        "target_swin_t": {
+          "family": "cnn-to-transformer",
+          "clean_AP": 0.4655712883321552,
+          "clean_AP50": 0.6810912557841304,
+          "adv_AP": 0.24263475885990457,
+          "adv_AP50": 0.3603181126115227,
+          "delta_AP": -0.22293652947225065,
+          "delta_AP50": -0.32077314317260774,
+          "delta_AP_pct": -47.88450986118365,
+          "delta_AP50_pct": -47.09694045378784,
+          "clean_correct_objects": 1637,
+          "evaded_objects": 614,
+          "ASR": 0.3750763591936469
+        },
+        "target_x101": {
+          "family": "same-family",
+          "clean_AP": 0.44642300168276666,
+          "clean_AP50": 0.6269659724417354,
+          "adv_AP": 0.07738747667182365,
+          "adv_AP50": 0.11333958698433744,
+          "delta_AP": -0.369035525010943,
+          "delta_AP50": -0.5136263854573979,
+          "delta_AP_pct": -82.66498894991614,
+          "delta_AP50_pct": -81.92252977574948,
+          "clean_correct_objects": 1533,
+          "evaded_objects": 1046,
+          "ASR": 0.6823222439660795
+        },
+        "target_r50_3x": {
+          "family": "same-family",
+          "clean_AP": 0.43207267710529745,
+          "clean_AP50": 0.615847234490702,
+          "adv_AP": 0.007974088321389029,
+          "adv_AP50": 0.012382106774135112,
+          "delta_AP": -0.42409858878390844,
+          "delta_AP50": -0.6034651277165669,
+          "delta_AP_pct": -98.15445670510526,
+          "delta_AP50_pct": -97.98941911554171,
+          "clean_correct_objects": 1563,
+          "evaded_objects": 1427,
+          "ASR": 0.9129878438899552
+        }
+      }
+    },
+    "runC_bim": {
+      "desc": "BIM/I-FGSM (kh\u00f4ng momentum), 4 model g\u1ed1c",
+      "decay": 0.0,
+      "objective": "cls",
+      "input_diversity": false,
+      "summary": {
+        "surrogate_r50": {
+          "family": "surrogate",
+          "clean_AP": 0.40214970056598165,
+          "clean_AP50": 0.5815186154776165,
+          "adv_AP": 0.0028598633682721227,
+          "adv_AP50": 0.004510339228990158,
+          "delta_AP": -0.39928983719770955,
+          "delta_AP50": -0.5770082762486264,
+          "delta_AP_pct": -99.28885602444882,
+          "delta_AP50_pct": -99.22438609720419,
+          "clean_correct_objects": 1487,
+          "evaded_objects": 1435,
+          "ASR": 0.9650302622730329
+        },
+        "target_r101": {
+          "family": "same-family",
+          "clean_AP": 0.4246838066710126,
+          "clean_AP50": 0.6099123973190939,
+          "adv_AP": 0.11839704713260155,
+          "adv_AP50": 0.17811413317634922,
+          "delta_AP": -0.306286759538411,
+          "delta_AP50": -0.43179826414274464,
+          "delta_AP_pct": -72.12112982110487,
+          "delta_AP50_pct": -70.79676787039246,
+          "clean_correct_objects": 1525,
+          "evaded_objects": 891,
+          "ASR": 0.5842622950819673
+        },
+        "target_convnext_t": {
+          "family": "cross-cnn-family",
+          "clean_AP": 0.5017838229929528,
+          "clean_AP50": 0.7085635343803154,
+          "adv_AP": 0.33509733510125816,
+          "adv_AP50": 0.4977190327637549,
+          "delta_AP": -0.1666864878916946,
+          "delta_AP50": -0.2108445016165605,
+          "delta_AP_pct": -33.218784714395944,
+          "delta_AP50_pct": -29.75661198836003,
+          "clean_correct_objects": 1693,
+          "evaded_objects": 436,
+          "ASR": 0.2575310100413467
+        },
+        "target_swin_t": {
+          "family": "cnn-to-transformer",
+          "clean_AP": 0.4655712883321552,
+          "clean_AP50": 0.6810912557841304,
+          "adv_AP": 0.3426022633236055,
+          "adv_AP50": 0.510020398478144,
+          "delta_AP": -0.12296902500854973,
+          "delta_AP50": -0.17107085730598648,
+          "delta_AP_pct": -26.412501820949753,
+          "delta_AP50_pct": -25.11717128258167,
+          "clean_correct_objects": 1637,
+          "evaded_objects": 357,
+          "ASR": 0.2180818570555895
+        }
+      }
+    },
+    "runD_cls_bbox": {
+      "desc": "MI-FGSM, objective cls+bbox, 4 model g\u1ed1c",
+      "decay": 1.0,
+      "objective": "cls_bbox",
+      "input_diversity": false,
+      "summary": {
+        "surrogate_r50": {
+          "family": "surrogate",
+          "clean_AP": 0.40214970056598165,
+          "clean_AP50": 0.5815186154776165,
+          "adv_AP": 0.004912688164418808,
+          "adv_AP50": 0.01097854370427809,
+          "delta_AP": -0.39723701240156284,
+          "delta_AP50": -0.5705400717733384,
+          "delta_AP_pct": -98.77839318107044,
+          "delta_AP50_pct": -98.11209075477986,
+          "clean_correct_objects": 1487,
+          "evaded_objects": 1407,
+          "ASR": 0.9462004034969738
+        },
+        "target_r101": {
+          "family": "same-family",
+          "clean_AP": 0.4246838066710126,
+          "clean_AP50": 0.6099123973190939,
+          "adv_AP": 0.06869298560690848,
+          "adv_AP50": 0.11715950041118856,
+          "delta_AP": -0.35599082106410407,
+          "delta_AP50": -0.4927528969079053,
+          "delta_AP_pct": -83.82491055042216,
+          "delta_AP50_pct": -80.79076586634899,
+          "clean_correct_objects": 1525,
+          "evaded_objects": 1051,
+          "ASR": 0.6891803278688524
+        },
+        "target_convnext_t": {
+          "family": "cross-cnn-family",
+          "clean_AP": 0.5017838229929528,
+          "clean_AP50": 0.7085635343803154,
+          "adv_AP": 0.20941997415999772,
+          "adv_AP50": 0.32586443702486495,
+          "delta_AP": -0.2923638488329551,
+          "delta_AP50": -0.38269909735545043,
+          "delta_AP_pct": -58.264901225614274,
+          "delta_AP50_pct": -54.010554987160816,
+          "clean_correct_objects": 1693,
+          "evaded_objects": 764,
+          "ASR": 0.45126993502658
+        },
+        "target_swin_t": {
+          "family": "cnn-to-transformer",
+          "clean_AP": 0.4655712883321552,
+          "clean_AP50": 0.6810912557841304,
+          "adv_AP": 0.23751508753526637,
+          "adv_AP50": 0.36905133862856676,
+          "delta_AP": -0.22805620079688885,
+          "delta_AP50": -0.3120399171555637,
+          "delta_AP_pct": -48.98416343797072,
+          "delta_AP50_pct": -45.81470023371782,
+          "clean_correct_objects": 1637,
+          "evaded_objects": 606,
+          "ASR": 0.37018937080024433
+        }
+      }
+    },
+    "runE_di_fgsm": {
+      "desc": "DI-MI-FGSM (input diversity), 4 model g\u1ed1c",
+      "decay": 1.0,
+      "objective": "cls",
+      "input_diversity": true,
+      "summary": {
+        "surrogate_r50": {
+          "family": "surrogate",
+          "clean_AP": 0.40214970056598165,
+          "clean_AP50": 0.5815186154776165,
+          "adv_AP": 0.0087849295515995,
+          "adv_AP50": 0.01247692455421289,
+          "delta_AP": -0.39336477101438216,
+          "delta_AP50": -0.5690416909234036,
+          "delta_AP_pct": -97.81550762334632,
+          "delta_AP50_pct": -97.85442387876692,
+          "clean_correct_objects": 1487,
+          "evaded_objects": 1338,
+          "ASR": 0.8997982515131137
+        },
+        "target_r101": {
+          "family": "same-family",
+          "clean_AP": 0.4246838066710126,
+          "clean_AP50": 0.6099123973190939,
+          "adv_AP": 0.03749804740786494,
+          "adv_AP50": 0.06024003447887946,
+          "delta_AP": -0.38718575926314763,
+          "delta_AP50": -0.5496723628402144,
+          "delta_AP_pct": -91.1703609087894,
+          "delta_AP50_pct": -90.12316609013554,
+          "clean_correct_objects": 1525,
+          "evaded_objects": 1179,
+          "ASR": 0.7731147540983606
+        },
+        "target_convnext_t": {
+          "family": "cross-cnn-family",
+          "clean_AP": 0.5017838229929528,
+          "clean_AP50": 0.7085635343803154,
+          "adv_AP": 0.11663555921898813,
+          "adv_AP50": 0.17112788242739058,
+          "delta_AP": -0.3851482637739646,
+          "delta_AP50": -0.5374356519529249,
+          "delta_AP_pct": -76.7558151788751,
+          "delta_AP50_pct": -75.84861849021726,
+          "clean_correct_objects": 1693,
+          "evaded_objects": 1062,
+          "ASR": 0.6272888363851152
+        },
+        "target_swin_t": {
+          "family": "cnn-to-transformer",
+          "clean_AP": 0.4655712883321552,
+          "clean_AP50": 0.6810912557841304,
+          "adv_AP": 0.15681550076580067,
+          "adv_AP50": 0.23306692464008927,
+          "delta_AP": -0.3087557875663546,
+          "delta_AP50": -0.44802433114404117,
+          "delta_AP_pct": -66.3176177964989,
+          "delta_AP50_pct": -65.7803675115807,
+          "clean_correct_objects": 1637,
+          "evaded_objects": 869,
+          "ASR": 0.5308491142333537
+        }
+      }
+    }
+  }
+}

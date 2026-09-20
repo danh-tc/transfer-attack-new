@@ -112,13 +112,7 @@ def main(limit=None):
         clean_by_img = common.group_by_image(results[name]["clean"])
         adv_by_img = common.group_by_image(results[name]["adv"])
         asr = common.compute_asr(gt_by_image, clean_by_img, adv_by_img)
-        summary[name] = {
-            "family": family,
-            "clean_AP": clean_map["AP"], "clean_AP50": clean_map["AP50"],
-            "adv_AP": adv_map["AP"], "adv_AP50": adv_map["AP50"],
-            "delta_AP50": adv_map["AP50"] - clean_map["AP50"],
-            **asr,
-        }
+        summary[name] = common.summarize_model_result(family, clean_map, adv_map, asr)
         print(f"[exp1] {name} ({family}): clean AP50={clean_map['AP50']:.4f} -> adv AP50={adv_map['AP50']:.4f} "
               f"| ASR={asr['ASR']:.4f} ({asr['evaded_objects']}/{asr['clean_correct_objects']})")
 

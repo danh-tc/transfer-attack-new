@@ -39,3 +39,7 @@ Chi tiết/troubleshooting: [docs/environment_setup.md](docs/environment_setup.m
 - Mỗi lần chạy thí nghiệm: cùng config tấn công cho mọi target, cố định budget/iterations/seed, kết quả ghi vào progress_log.md.
 - Tất cả docs trong dự án này viết bằng tiếng Việt.
 - Không commit `.venv/`, `third_party/`, checkpoint, dataset — xem `.gitignore`. Version môi trường đã pin trong `scripts/setup_env.sh`, không phụ thuộc gì cài thủ công ngoài đó.
+- Cỡ mẫu thí nghiệm theo 3 mức (thống nhất với user 2026-09-20):
+  - **50 ảnh — quick test**: chỉ sanity-check code chạy đúng (không lỗi, xu hướng không vô lý), KHÔNG có ý nghĩa thống kê, không ghi vào progress_log.md như một kết luận.
+  - **300 ảnh — confirm**: đủ để xem xu hướng/thứ tự có giữ nguyên không, được phép dùng làm milestone thật (kể cả để ra quyết định kiểu research_plan.md §6.7) — nhưng khi ghi vào progress_log.md phải nêu rõ n=300 và gắn caveat "sơ bộ ở n=300, cần đối chiếu ở n=1000". Lấy đúng 300 ảnh **đầu** của subset 1000 cố định (`configs/coco_val2017_subset_1000.json`, tức `range(300)` trên cùng dataset, không random lại tập riêng) để 300 luôn là tập con lồng trong 1000, so sánh trực tiếp được giữa 2 mức.
+  - **1000 ảnh — final**: số cuối dùng để trích dẫn/kết luận chính thức (paper, báo cáo), không cần đối chiếu thêm.

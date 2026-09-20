@@ -316,6 +316,25 @@ Sau đó xem lại giả thuyết nghiên cứu.
 
 ---
 
+## 6.8 Thí nghiệm 1B — Kiểm tra confound, xác nhận quy tắc quyết định §6.7
+
+> **⚠️ SUPERSEDED (2026-09-20, cùng ngày, phát hiện sau)**: toàn bộ số liệu Thí nghiệm 1 + 1B mô tả trong mục này (bao gồm cả bảng trong progress_log.md) được tính từ 1 attack có **bug tọa độ RoI** (GT bbox ở tọa độ ảnh gốc, chưa scale theo `scale_factor` để khớp `feats` tính từ ảnh đã resize — xem docs/progress_log.md entry "Phát hiện + fix bug tọa độ RoI"). Bug làm attack yếu hơn thật rất nhiều (whitebox ASR chỉ ~33% thay vì ~95% sau khi fix). Đã fix bug, re-run Exp1+1B ở n=300 (tier "confirm"), số liệu mới đầy đủ ở progress_log.md entry cùng tên nêu trên. **Kết luận định tính bên dưới (transfer gap tồn tại, thứ tự same>cross-CNN>CNN→Transformer, đủ điều kiện sang Thí nghiệm 2) vẫn ĐÚNG và còn RÕ RÀNG HƠN sau khi fix** — chỉ có con số ASR/TransferGap cụ thể trong các bullet dưới đây là dựa trên bản có bug, đọc bằng progress_log.md để lấy số liệu đúng.
+
+**Cập nhật 2026-09-20**: Thí nghiệm 1 gốc (§6, kết quả đầy đủ ở docs/progress_log.md entry "Kết quả Thí nghiệm 1") cho transfer gap rõ ràng, nhưng tự flag 3 giới hạn có thể là confound thay vì do kiến trúc backbone: (1) model-strength, (2) attack cụ thể (MI-FGSM), (3) attack objective (chỉ classification). Thí nghiệm 1B kiểm tra cả 3, cộng thêm 1 kiểm tra bổ sung (augmentation-based attack mạnh hơn, theo §11) — 4 run trên cùng subset 1000 ảnh cố định, chi tiết đầy đủ + bảng số liệu ở docs/progress_log.md entry "Kết quả Thí nghiệm 1B":
+
+- **Run B** (model-strength): mở rộng model zoo trong cùng họ ResNet/ResNeXt (thêm ResNeXt-101, ResNet-50 train 3x). Kết quả: `target_r50_3x` (cùng backbone surrogate, train mạnh hơn) có ASR cao hơn hẳn 2 target same-family còn lại dù clean AP nằm giữa — model-strength không đơn điệu với ASR trong cùng họ, loại được confound này làm nguyên nhân chính.
+- **Run C** (attack robustness — BIM/I-FGSM, bỏ momentum): thứ tự same-family > cross-CNN > CNN→Transformer giữ nguyên.
+- **Run D** (objective robustness — thêm loss bbox): pattern gần như trùng khớp Run B/Thí nghiệm 1 gốc.
+- **Run E** (DI-FGSM, input diversity — baseline augmentation-based theo §11): ASR tăng ở mọi model nhưng thứ tự vẫn giữ; TransferGap tuyệt đối co lại phần nào (đặc biệt so ConvNeXt) nhưng không biến mất.
+
+**Kết luận**: TransferGap (định nghĩa §5) dương và có ý nghĩa ở cả 4 run, không phụ thuộc việc đổi model-zoo/attack/objective/augmentation. Theo đúng quy tắc quyết định §6.7 ("nếu transfer gap rõ ràng → tiến hành Thí nghiệm 2"), tiền đề cốt lõi giờ đã được xác nhận vững hơn (không chỉ 1 thiết lập cụ thể như sau Thí nghiệm 1 gốc) — **đủ điều kiện chuyển sang Thí nghiệm 2 (§7)**.
+
+**Giới hạn còn lại, chưa giải quyết bởi Thí nghiệm 1B**: confound training-recipe riêng của ConvNeXt-Tiny (checkpoint duy nhất dùng schedule 3x+AMP+ms-crop, không có bản 1x để so sánh — xem model_registry.md) vẫn chưa được cô lập; toàn bộ 4 run dùng đúng 1 seed/1 subset, chưa có nhiều seed để báo cáo mean/std.
+
+**Bằng chứng độc lập củng cố tiền đề**: Winter et al., "Benchmarking Adversarial Robustness and Adversarial Training Strategies for Object Detection", arXiv:2602.16494 (nộp 2026-02-18) báo cáo hiện tượng "modern adversarial attacks... significant lack of transferability to transformer-based architectures" — khớp trực tiếp với phát hiện của Thí nghiệm 1/1B, độc lập với thiết lập trong dự án này. Nên cân nhắc dùng làm 1 baseline/related-work khi so sánh ở §11.
+
+---
+
 # 7. Thí nghiệm 2 — Tìm cơ chế (Mechanism)
 
 Mục tiêu là xác định thuộc tính đo lường được nào tương quan với khả năng chuyển giao.
@@ -334,6 +353,30 @@ Similarity(
 \]
 
 có giảm theo họ kiến trúc không.
+
+**Thiết kế Thí nghiệm 2A (chốt 2026-09-20)** — thứ tự rẻ → sâu, gradient alignment làm bước đầu tiên vì chi phí tính toán thấp nhất so với feature-level/saliency:
+
+1. Với cùng ảnh sạch/object, tính cosine similarity giữa gradient của surrogate và từng target:
+   \[
+   \cos(g_s, g_t) = \frac{g_s^\top g_t}{\|g_s\| \|g_t\|}
+   \]
+   Giả thuyết thứ tự: \(\cos(R50, R101) > \cos(R50, ConvNeXt) > \cos(R50, Swin)\).
+2. **Không** chỉ tương quan ở mức 3 điểm (3 target), vì quá ít điểm để kết luận thống kê. Tính **per-image hoặc per-object**, sau đó so sánh phân phối (distribution) của \(\cos(g_s, g_t)\) giữa nhóm object **evaded** (né tránh thành công sau attack) và nhóm **not evaded** — kiểm tra:
+   \[
+   GradientSimilarity \uparrow \iff TransferSuccess \uparrow
+   \]
+   ở mức per-object, không chỉ mức tổng hợp per-model.
+3. Rẽ nhánh theo kết quả:
+   - Nếu gradient alignment giải thích được gap (pattern rõ như `R50→R101` similarity cao/ASR cao, `R50→ConvNeXt` giữa, `R50→Swin` thấp/ASR thấp) → đi tiếp xuống **feature-level alignment** (mục B) để tìm layer nào gây divergence.
+   - Nếu gradient alignment yếu/không rõ → chuyển sớm sang **object evidence / saliency / transformation consistency** (mục C, D), không cố bám vào gradient alignment nếu dữ liệu không ủng hộ.
+
+Chuỗi suy luận mong muốn của Thí nghiệm 2A:
+
+\[
+\boxed{\text{Architecture family} \rightarrow \text{gradient alignment} \rightarrow \text{transfer success}}
+\]
+
+Nếu đạt được, đây là bước chuyển từ "empirical transfer gap" (Thí nghiệm 1/1B) sang **mechanistic explanation** — nền tảng trực tiếp để đặt câu hỏi trung tâm cho việc thiết kế method: **làm sao từ một surrogate duy nhất tạo ra gradient/feature direction ít architecture-specific hơn?**
 
 ---
 
@@ -532,6 +575,14 @@ Tất cả so sánh phải dùng:
 
 Khả năng chuyển giao đối kháng thay đổi thế nào khi kiến trúc feature-extractor giữa surrogate và target khác nhau?
 
+**KHÓA (locked) — 2026-09-20**, dựa trên Thí nghiệm 1 + 1B (§6, §6.8):
+
+> **Cross-family transfer gap là hiện tượng ổn định trong setting hiện tại, không phụ thuộc riêng vào attack, objective hay clean model strength.**
+
+Cách diễn đạt claim (cố ý, không claim nhân quả tuyệt đối): **"strong evidence that backbone architecture contributes to the transfer gap"** — không phải "backbone architecture is the cause". Lý do dùng từ "contributes" thay vì "is the cause": vẫn còn ít nhất 1 confound chưa cô lập (training-recipe của ConvNeXt-Tiny, xem model_registry.md) và chưa test nhiều seed/subset — đủ để khóa RQ1 làm tiền đề cho Thí nghiệm 2, nhưng chưa đủ để claim quan hệ nhân quả tuyệt đối. Không sửa lại cách diễn đạt này trừ khi có bằng chứng mới đủ mạnh để claim chặt hơn hoặc yếu hơn.
+
+**Cập nhật cùng ngày (sau khi khóa)**: phát hiện + fix 1 bug tọa độ RoI trong attack (xem §6.8 và docs/progress_log.md) khiến toàn bộ số liệu ASR/TransferGap dùng để khóa RQ1 ở trên là từ bản có bug (attack yếu hơn nhiều so với thiết kế). Đã re-run ở n=300 với bản đã fix — **claim khóa ở trên vẫn đứng vững, bằng chứng còn mạnh hơn** (TransferGap sau fix lớn hơn 3-5 lần số liệu cũ, xem progress_log.md). Không cần mở khóa lại RQ1, chỉ cần lưu ý số liệu cụ thể trích dẫn từ giờ nên lấy từ progress_log.md entry sau ngày fix, không lấy từ entry "Kết quả Thí nghiệm 1/1B" cũ (đã đánh dấu superseded).
+
 ### RQ2
 
 Thuộc tính biểu diễn đo lường được nào giải thích tốt nhất khoảng cách chuyển giao xuyên họ?
@@ -580,3 +631,5 @@ Milestone đầu tiên **không phải** là SOTA.
 Milestone đầu tiên là:
 
 > **Xác lập xem "khoảng cách chuyển giao xuyên feature-extractor" có thật, đo lường được, và tái lập được dưới thiết lập single-surrogate có kiểm soát hay không.**
+
+**Trạng thái (cập nhật 2026-09-20): milestone đầu tiên đã đạt.** Thí nghiệm 1 (§6) xác lập transfer gap; Thí nghiệm 1B (§6.8) xác nhận gap này đứng vững qua 4 confound-check (model-strength, attack choice, attack objective, augmentation-based attack). Theo quy tắc §6.7, bước tiếp theo là **Thí nghiệm 2 (§7)** — tìm cơ chế giải thích transfer gap.

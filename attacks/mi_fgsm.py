@@ -46,6 +46,16 @@ def mi_fgsm_attack(model, x, data_sample, epsilon=8.0, num_iter=10, decay=1.0):
     if gt_bboxes.numel() == 0:
         return x.detach().clone()
 
+    # BUG FIX 2026-09-20: gt_instances.bboxes ở tọa độ ẢNH GỐC (ori_shape) — test pipeline chạy
+    # LoadAnnotations SAU Resize nên GT không được resize theo, trong khi feats tính từ ảnh ĐÃ
+    # resize (img_shape, dùng bởi model.extract_feat). Không scale lại thì RoIAlign trích sai vùng
+    # feature (lệch tỷ lệ = scale_factor, ~1.8x quan sát được, nặng hơn với object xa gốc tọa độ).
+    # Phát hiện bằng cách so trực tiếp gt_instances.bboxes với annotation gốc trong file COCO —
+    # khớp tuyệt đối, xác nhận chưa hề qua resize. Xem docs/progress_log.md 2026-09-20.
+    w_scale, h_scale = data_sample.metainfo["scale_factor"]
+    scale = torch.tensor([w_scale, h_scale, w_scale, h_scale], device=x.device, dtype=gt_bboxes.dtype)
+    gt_bboxes = gt_bboxes * scale
+
     rois = bbox2roi([gt_bboxes])
 
     alpha = epsilon / num_iter
