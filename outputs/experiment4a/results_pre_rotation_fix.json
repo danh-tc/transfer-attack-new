@@ -1,0 +1,66 @@
+{
+  "attack": "OSFD-matched",
+  "epsilon": 8.0,
+  "num_iter": 10,
+  "decay": 1.0,
+  "osfd_k": 3.0,
+  "n_images": 5,
+  "summary": {
+    "surrogate_r50": {
+      "family": "surrogate",
+      "clean_AP": 0.5068472951191223,
+      "clean_AP50": 0.6966638222263783,
+      "adv_AP": 0.0966723131940523,
+      "adv_AP50": 0.13713694350801536,
+      "delta_AP": -0.41017498192507,
+      "delta_AP50": -0.5595268787183629,
+      "delta_AP_pct": -80.92673787055887,
+      "delta_AP50_pct": -80.31519089512112,
+      "clean_correct_objects": 26,
+      "evaded_objects": 20,
+      "ASR": 0.7692307692307693
+    },
+    "target_r101": {
+      "family": "same-family",
+      "clean_AP": 0.4578382454805391,
+      "clean_AP50": 0.6421087295895364,
+      "adv_AP": 0.14191905072860225,
+      "adv_AP50": 0.19113499585252638,
+      "delta_AP": -0.31591919475193686,
+      "delta_AP50": -0.45097373373701,
+      "delta_AP_pct": -69.00236008469619,
+      "delta_AP50_pct": -70.23323511351293,
+      "clean_correct_objects": 26,
+      "evaded_objects": 17,
+      "ASR": 0.6538461538461539
+    },
+    "target_convnext_t": {
+      "family": "cross-cnn-family",
+      "clean_AP": 0.6196957495449844,
+      "clean_AP50": 0.8009497378309259,
+      "adv_AP": 0.4352205447817509,
+      "adv_AP50": 0.6212471247124712,
+      "delta_AP": -0.18447520476323354,
+      "delta_AP50": -0.1797026131184547,
+      "delta_AP_pct": -29.76867356258061,
+      "delta_AP50_pct": -22.436191015570127,
+      "clean_correct_objects": 30,
+      "evaded_objects": 12,
+      "ASR": 0.4
+    },
+    "target_swin_t": {
+      "family": "cnn-to-transformer",
+      "clean_AP": 0.5193337775335974,
+      "clean_AP50": 0.6746303201748747,
+      "adv_AP": 0.43352119378604526,
+      "adv_AP50": 0.5295197853118644,
+      "delta_AP": -0.08581258374755218,
+      "delta_AP50": -0.1451105348630103,
+      "delta_AP_pct": -16.52358992613391,
+      "delta_AP50_pct": -21.509637281851692,
+      "clean_correct_objects": 28,
+      "evaded_objects": 9,
+      "ASR": 0.32142857142857145
+    }
+  }
+}

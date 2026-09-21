@@ -1,0 +1,55 @@
+{
+  "epsilon": 8.0,
+  "num_iter": 10,
+  "decay": 1.0,
+  "k": 3,
+  "lam": 0.5,
+  "reg_stage_modes": {
+    "3": "clip_weight",
+    "4": "clip_weight"
+  },
+  "n_images": 300,
+  "n_images_used": 300,
+  "summary": {
+    "mean_cos_consecutive": {
+      "mean_baseline": 0.14187549540192035,
+      "mean_reg": 0.17310479252462554,
+      "median_baseline": 0.1138094382153617,
+      "median_reg": 0.14182068883544868,
+      "mean_diff_reg_minus_baseline": 0.03122929712270518,
+      "wilcoxon_p": 1.1813129429570005e-14
+    },
+    "mean_sign_flip_rate": {
+      "mean_baseline": 0.384000072426818,
+      "mean_reg": 0.38235989990609665,
+      "median_baseline": 0.4154130452209049,
+      "median_reg": 0.41220928728580475,
+      "mean_diff_reg_minus_baseline": -0.0016401725207213999,
+      "wilcoxon_p": 5.033720367590122e-09
+    },
+    "mean_rel_change_norm": {
+      "mean_baseline": 1.2831122854241617,
+      "mean_reg": 1.2572109450455062,
+      "median_baseline": 1.3039382100105286,
+      "median_reg": 1.2919314569897122,
+      "mean_diff_reg_minus_baseline": -0.025901340378655328,
+      "wilcoxon_p": 6.6256313500762774e-12
+    },
+    "mean_cos_drift": {
+      "mean_baseline": 0.011112571259403653,
+      "mean_reg": 0.018595856891263085,
+      "median_baseline": 0.003839613844320411,
+      "median_reg": 0.004688860162989133,
+      "mean_diff_reg_minus_baseline": 0.007483285631859434,
+      "wilcoxon_p": 2.3151815634288627e-11
+    },
+    "final_cos_drift": {
+      "mean_baseline": -0.010454042272273607,
+      "mean_reg": -0.011189379518060984,
+      "median_baseline": -0.008252495434135199,
+      "median_reg": -0.009242389351129532,
+      "mean_diff_reg_minus_baseline": -0.0007353372457873775,
+      "wilcoxon_p": 0.13914839857006955
+    }
+  }
+}

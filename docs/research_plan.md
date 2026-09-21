@@ -614,6 +614,21 @@ Một setting tăng Swin nhưng giảm ConvNeXt (hoặc ngược lại) KHÔNG �
 
 Đây chỉ là hướng nghiên cứu, chưa phải phương pháp cố định.
 
+## 9.2 Mechanism (chốt 2026-09-21, sau Thí nghiệm 3F–3I — xem docs/progress_log.md entry cùng ngày)
+
+Thay thế giả thuyết cơ chế ban đầu ("regularization giúp transfer bằng cách làm gradient surrogate giống gradient target hơn", ngầm định khi thiết kế 3F) bằng bằng chứng thực nghiệm trực tiếp. Chuỗi 4 thí nghiệm, thứ tự rẻ→sâu:
+
+- **3F (cosine alignment với target) — bác bỏ**: đo cos(g_s, g_t) trước/sau regularization, n=300. Kết quả KHÔNG xác nhận alignment tăng ở ConvNeXt (Δ=−0.0039) hay Swin (Δ=+0.0002, ~0) dù ASR cross-family tăng thật (đã confirm ở 3A-3E). Method **không** hoạt động bằng cách tăng gradient alignment với target.
+- **3G (gradient concentration/tail tại surrogate) — mạnh**: so RAW vs REG (Stage 3-4, k=3, λ=0.5) trên 6 thống kê toàn-tensor, n=300. 4/5 metric giảm mạnh và nhất quán dưới reg: `max_abs` giảm 8-27×, `kurtosis` giảm 6.8-19×, `top1%-energy` giảm ~40-50%, `L∞/L2` giảm ~4-14× (Wilcoxon paired p≈6e-51 mọi metric). `std` chỉ giảm ~45-54% — tín hiệu gradient không bị triệt tiêu, chỉ bớt bị vài giá trị cực trị "thống trị".
+- **3H (iteration trajectory stability) — yếu nhưng nhất quán**: chạy attack thật 10-iteration, log gradient mỗi bước. 4/5 metric có p cực nhỏ và đúng chiều (cos giữa gradient liên tiếp tăng, sign-flip giảm, trôi dạt so với hướng ban đầu giảm), nhưng effect size nhỏ và `final_cos_drift` (so g1 với g10, bước cuối) KHÔNG có ý nghĩa — đây là hệ quả phụ (secondary consequence), không đủ làm cơ chế chính.
+- **3I (linkage: ΔC per-ảnh ↔ tỷ lệ giành lại transfer) — mạnh và đặc thù cross-family**: với mỗi ảnh, ΔC = mức giảm `top1%-energy` (Stage 3-4, raw−reg). So ΔC giữa ảnh có "giành lại" object bị né tránh (baseline fail → reg success) vs ảnh không giành lại được nào: có ý nghĩa ở ConvNeXt (MWU p=1.32e-04, Spearman ρ=0.205) và Swin (p=1.51e-04, ρ=0.187), **KHÔNG có ý nghĩa** ở R101 same-family (control, p=0.199, ρ=0.046).
+
+**Kết luận cơ chế (claim an toàn, dùng nguyên văn khi viết paper — không viết mạnh hơn)**:
+
+> Suppressing extreme mid/deep backward-gradient concentration is strongly associated with improved transfer specifically to cross-family targets, while no corresponding association is observed for the same-family control.
+
+3I là bằng chứng **linkage/correlational ở mức per-ảnh** giữa ΔC và gained-transfer-rate — không phải "chứng minh causal mediation" theo nghĩa chặt (chưa làm mediation analysis chính thức). Kết hợp với 3A (causal intervention ở mức Stage selection) và 3G (regularization thực sự giảm concentration), bằng chứng đủ mạnh để thay thế hoàn toàn giả thuyết "gradient alignment" (§7.A cũ, đã bác bỏ bởi 3F) làm câu chuyện cơ chế chính thức của method v0.1.
+
 ---
 
 # 10. Mục tiêu về tính mới (Novelty)
@@ -689,15 +704,21 @@ Thuộc tính biểu diễn đo lường được nào giải thích tốt nhấ
 
 Không cần điều tra thêm saliency/object evidence/transformation consistency ở mức forward representation nữa — dữ liệu đã đủ rõ để chuyển trọng tâm sang RQ3 (thiết kế method dựa trên backward sensitivity).
 
+**Lưu ý phạm vi (thêm 2026-09-21, sau Thí nghiệm 3F–3I — xem §9.2)**: RQ2 ở trên là 1 câu hỏi **diagnostic/correlational** về transfer gap GỐC (dùng gradient RAW, chưa can thiệp gì) — kết luận "backward sensitivity alignment giải thích transfer gap tốt hơn forward feature similarity" **vẫn đúng, không đổi**. Đây KHÁC với câu hỏi "method v0.1 (regularization) có hoạt động BẰNG CÁCH tăng chính alignment này không?" — câu hỏi thứ hai đó được kiểm tra riêng ở Thí nghiệm 3F và **bị bác bỏ** (regularization không làm tăng cos(g_s,g_t) một cách có ý nghĩa). Không nhầm lẫn 2 câu hỏi này: RQ2 nói về ĐO ĐẠC (measurement) giải thích gap tốt nhất, còn cơ chế thật của METHOD lại là 1 phát hiện riêng (giảm concentration, §9.2), không phải trực tiếp từ RQ2.
+
 ### RQ3
 
 **Cập nhật 2026-09-20** — cụ thể hóa từ câu hỏi gốc, dựa trực tiếp trên RQ2 đã khóa (không còn là "object evidence" chung chung mà là "backward sensitivity tại Stage 3-4" cụ thể):
 
 > **Can we design a single-surrogate attack that makes mid/deep backward signals less architecture-specific and thereby improves cross-family transferability?**
 
-Đây là câu hỏi mở duy nhất còn lại — điểm xuất phát cho literature search / idea generation / thiết kế method (research_plan.md §8 bước 1 trở đi). RQ1 (khóa) → RQ2 (khóa) → RQ3 (method search, đang mở).
-
 Câu hỏi gốc (tham khảo, đã thay thế bởi câu trên): "Một tấn công single-surrogate có thể khai thác 'object evidence' bất biến theo kiến trúc để giảm khoảng cách chuyển giao xuyên họ hay không?" — vẫn đúng tinh thần, nhưng "object evidence bất biến theo kiến trúc" giờ đã được cụ thể hóa thành "backward sensitivity ít architecture-specific hơn tại Stage 3-4", nhờ RQ2 đã trả lời.
+
+**Cập nhật 2026-09-21 — trả lời có điều kiện (không khóa hoàn toàn)**, dựa trên Thí nghiệm 3A + 3F–3I (chi tiết §9.2):
+
+> **RQ3 — Partially answered**: method v0.1 (Stage 3-4 backward-variance clipping + object-conditioned weighting) làm mid/deep backward signal của surrogate ÍT bị vài giá trị cực trị "thống trị" hơn (3G, mạnh), KHÔNG làm signal đó "giống target hơn" theo nghĩa cosine alignment (3F, bác bỏ trực tiếp giả thuyết ban đầu của câu hỏi RQ3). Mức độ giảm concentration đó (ΔC per-ảnh) tương quan có ý nghĩa với việc giành lại transfer, đặc thù ở target cross-family, không ở same-family control (3I, mạnh). Trajectory optimization ổn định hơn (3H) là hệ quả phụ, effect nhỏ.
+
+Nói cách khác: câu trả lời cho RQ3 là **có, nhưng không theo cơ chế "architecture-invariant" ban đầu hình dung** (không phải làm signal giống nhau giữa các kiến trúc hơn) — mà là làm signal của chính surrogate bớt cực đoan/tập trung hơn, và mức giảm đó liên hệ trực tiếp với transfer gain ở đúng nhóm target mà nghiên cứu nhắm tới (cross-family). Chưa khóa hoàn toàn vì 3I là bằng chứng correlational (chưa phải causal mediation chính thức) và mask/control ablation (kiểm tra vai trò thật của "object-conditioned", phân biệt với spatial weighting bất kỳ) chưa chạy — xem docs/progress_log.md để biết trạng thái mới nhất.
 
 ---
 

@@ -1,0 +1,31 @@
+[exp3h] loading surrogate...
+Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_r50_fpn_1x_coco_20200205-d4b0c5d6.pth
+[exp3h] building dataset (limit=300)...
+loading annotations into memory...
+Done (t=0.10s)
+creating index...
+index created!
+[exp3h] 300 images (dataset total: 1000)
+[exp3h] 20/300 ảnh xong (0.26 ảnh/s, ETA 18.2 phút, 20 ảnh dùng được)
+[exp3h] 40/300 ảnh xong (0.26 ảnh/s, ETA 16.6 phút, 40 ảnh dùng được)
+[exp3h] 60/300 ảnh xong (0.27 ảnh/s, ETA 14.9 phút, 60 ảnh dùng được)
+[exp3h] 80/300 ảnh xong (0.26 ảnh/s, ETA 13.9 phút, 80 ảnh dùng được)
+[exp3h] 100/300 ảnh xong (0.26 ảnh/s, ETA 12.8 phút, 100 ảnh dùng được)
+[exp3h] 120/300 ảnh xong (0.26 ảnh/s, ETA 11.6 phút, 120 ảnh dùng được)
+[exp3h] 140/300 ảnh xong (0.26 ảnh/s, ETA 10.3 phút, 140 ảnh dùng được)
+[exp3h] 160/300 ảnh xong (0.26 ảnh/s, ETA 9.1 phút, 160 ảnh dùng được)
+[exp3h] 180/300 ảnh xong (0.26 ảnh/s, ETA 7.8 phút, 180 ảnh dùng được)
+[exp3h] 200/300 ảnh xong (0.26 ảnh/s, ETA 6.5 phút, 200 ảnh dùng được)
+[exp3h] 220/300 ảnh xong (0.25 ảnh/s, ETA 5.2 phút, 220 ảnh dùng được)
+[exp3h] 240/300 ảnh xong (0.25 ảnh/s, ETA 3.9 phút, 240 ảnh dùng được)
+[exp3h] 260/300 ảnh xong (0.25 ảnh/s, ETA 2.6 phút, 260 ảnh dùng được)
+[exp3h] 280/300 ảnh xong (0.26 ảnh/s, ETA 1.3 phút, 280 ảnh dùng được)
+[exp3h] 300/300 ảnh xong (0.26 ảnh/s, ETA 0.0 phút, 300 ảnh dùng được)
+[exp3h] tổng hợp thống kê (paired Wilcoxon baseline vs reg theo ảnh)...
+[exp3h] mean_cos_consecutive: baseline=0.1419 reg=0.1731 diff=+0.03123 (p=1.18e-14)
+[exp3h] mean_sign_flip_rate: baseline=0.384 reg=0.3824 diff=-0.00164 (p=5.03e-09)
+[exp3h] mean_rel_change_norm: baseline=1.283 reg=1.257 diff=-0.0259 (p=6.63e-12)
+[exp3h] mean_cos_drift: baseline=0.01111 reg=0.0186 diff=+0.007483 (p=2.32e-11)
+[exp3h] final_cos_drift: baseline=-0.01045 reg=-0.01119 diff=-0.0007353 (p=1.39e-01)
+[exp3h] Xong. Kết quả: /workspace/transfer-attack-new/outputs/experiment3h/records.jsonl, /workspace/transfer-attack-new/outputs/experiment3h/summary.json
+EXP3H_DONE_EXIT=0

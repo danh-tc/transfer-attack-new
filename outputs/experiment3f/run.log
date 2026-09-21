@@ -6,8 +6,28 @@ Loads checkpoint by local backend from path: /workspace/transfer-attack-new/chec
 Loads checkpoint by local backend from path: /workspace/transfer-attack-new/checkpoints/mask_rcnn_swin-t-p4-w7_fpn_1x_coco_20210902_120937-9d6b7cfa.pth
 [exp3f] building dataset (limit=300)...
 loading annotations into memory...
-Done (t=0.11s)
+Done (t=0.10s)
 creating index...
 index created!
 [exp3f] 300 images (dataset total: 1000)
-[exp3f] 20/300 ảnh xong (0.42 ảnh/s, ETA 11.0 phút, 20 ảnh dùng được, 321 record)
+[exp3f] 20/300 ảnh xong (0.51 ảnh/s, ETA 9.1 phút, 20 ảnh dùng được, 321 record)
+[exp3f] 40/300 ảnh xong (0.53 ảnh/s, ETA 8.2 phút, 40 ảnh dùng được, 649 record)
+[exp3f] 60/300 ảnh xong (0.55 ảnh/s, ETA 7.2 phút, 59 ảnh dùng được, 908 record)
+[exp3f] 80/300 ảnh xong (0.57 ảnh/s, ETA 6.4 phút, 79 ảnh dùng được, 1140 record)
+[exp3f] 100/300 ảnh xong (0.57 ảnh/s, ETA 5.9 phút, 99 ảnh dùng được, 1472 record)
+[exp3f] 120/300 ảnh xong (0.57 ảnh/s, ETA 5.2 phút, 119 ảnh dùng được, 1721 record)
+[exp3f] 140/300 ảnh xong (0.54 ảnh/s, ETA 5.0 phút, 139 ảnh dùng được, 2252 record)
+[exp3f] 160/300 ảnh xong (0.55 ảnh/s, ETA 4.2 phút, 159 ảnh dùng được, 2479 record)
+[exp3f] 180/300 ảnh xong (0.53 ảnh/s, ETA 3.8 phút, 179 ảnh dùng được, 3025 record)
+[exp3f] 200/300 ảnh xong (0.53 ảnh/s, ETA 3.2 phút, 199 ảnh dùng được, 3327 record)
+[exp3f] 220/300 ảnh xong (0.53 ảnh/s, ETA 2.5 phút, 219 ảnh dùng được, 3646 record)
+[exp3f] 240/300 ảnh xong (0.53 ảnh/s, ETA 1.9 phút, 239 ảnh dùng được, 3986 record)
+[exp3f] 260/300 ảnh xong (0.53 ảnh/s, ETA 1.3 phút, 259 ảnh dùng được, 4242 record)
+[exp3f] 280/300 ảnh xong (0.53 ảnh/s, ETA 0.6 phút, 279 ảnh dùng được, 4557 record)
+[exp3f] 300/300 ảnh xong (0.53 ảnh/s, ETA 0.0 phút, 299 ảnh dùng được, 4855 record)
+[exp3f] tổng hợp mean cos_before/cos_after theo target...
+[exp3f] target_r101: mean_cos_before=0.1247 mean_cos_after=0.1104 delta=-0.0143
+[exp3f] target_convnext_t: mean_cos_before=0.0697 mean_cos_after=0.0658 delta=-0.0039
+[exp3f] target_swin_t: mean_cos_before=0.0360 mean_cos_after=0.0362 delta=+0.0002
+[exp3f] Xong. Kết quả: /workspace/transfer-attack-new/outputs/experiment3f/records.jsonl, /workspace/transfer-attack-new/outputs/experiment3f/summary.json
+EXP3F_DONE_EXIT=0

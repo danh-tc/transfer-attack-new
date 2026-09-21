@@ -799,3 +799,189 @@ Nếu máy GPU thuê đã đổi (khác máy này — theo CLAUDE.md luôn giả
 ### Trạng thái git
 
 Chưa commit gì trong toàn bộ session này kể từ lần cuối user tự commit (nếu có) — `git status --short` cho thấy nhiều file mới/sửa (`docs/progress_log.md`, `experiments/experiment3d_replicate.py`, `experiments/experiment3e.py`, `experiments/experiment3f.py`, và các `outputs/experiment3*/`). User biết và tự quản lý việc commit (đã nói trước đó "commit tôi tự làm được").
+
+## 2026-09-21 — Resume máy GPU thuê mới, setup lại toàn bộ, hoàn tất Thí nghiệm 3E (Component Ablation) + 3F (Mechanism Validation) ở n=300
+
+### Setup môi trường trên máy mới
+
+Đúng như CLAUDE.md dự đoán — máy thuê lần này hoàn toàn mới (`.venv` cũ trên máy chỉ mới cài dở `torch`+`mmengine`, thiếu `mmcv`/`mmdet`/`mmpretrain`; không có `third_party/mmdetection`, `checkpoints/`, `data/coco/`). Đã chạy lại full pipeline: `scripts/setup_env.sh` → `scripts/download_dataset.sh` → tải lại 4 checkpoint (surrogate R50 + target R101/ConvNeXt-Tiny/Swin-Tiny, đúng URL trong model_registry.md) → `scripts/build_subset_annotations.py`. Verify: torch 2.1.2+cu118 (cuda_available=True), mmcv 2.1.0, mmdet 3.3.0, mmpretrain 1.2.0, GPU RTX 4000 Ada Generation (driver 560.35.03) — cùng model GPU với máy thuê lần trước (xem entry 2026-09-20), subset build ra đúng 1000 ảnh/7496 annotation khớp các lần trước. Cả 4 checkpoint load đúng backbone (ResNet/ResNet/ConvNeXt/SwinTransformer) qua `init_detector`.
+
+Ghi chú kỹ thuật nhỏ (không cần sửa gì, chỉ lưu lại phòng gặp lại): trong lúc `mim install mmcv`/`mim install mmpretrain`, nội bộ `mim` gọi `get_torch_cuda_version()` bị crash (traceback in ra) do warning `Failed to initialize NumPy: _ARRAY_API not found` (numpy tạm thời bị 1 dependency của `openmim` kéo lên 2.x trước khi script kịp pin lại) — không fatal, `pip` vẫn tự fallback cài đúng version qua PyPI ngay sau đó, bước verify cuối `setup_env.sh` pass đầy đủ (kể cả `mmcv.ops.nms` chạy CUDA thật).
+
+**Máy lần này chậm hơn hẳn về CPU** (Xeon Silver 4114 @ 2.2GHz, 40 core) so với máy thuê lần trước dù cùng GPU: tốc độ attack 10-iteration đo được chỉ ~0.25-0.26 ảnh/s (so với ~0.9-1.3 ảnh/s các lần chạy trước trên cùng loại GPU RTX 4000 Ada). Đã tự profile để xác nhận: GPU chỉ dùng ~21% utilization trong lúc chạy, không có process nào khác tranh GPU — đúng dấu hiệu **CPU launch-bound** (CPU đời cũ/xung nhịp thấp không "bơm" kịp lệnh CUDA cho vòng lặp 10 iteration × nhiều model × backward hook), không phải bug code hay cấu hình sai. Không có cách sửa an toàn (không đổi kết quả) để tăng tốc giữa lúc đang chạy — chấp nhận chạy chậm hơn, dùng tmux để không mất tiến độ nếu mất kết nối.
+
+### Thí nghiệm 3E — Component Ablation (n=300, đầy đủ 5 setting)
+
+Hoàn tất theo đúng thiết kế đã chốt trước đó (xem entry HANDOFF 2026-09-20): chỉ chạy mới 2 điểm `clip_s3`/`clip_s4`, tái sử dụng `baseline`/`clip_s3s4` từ `outputs/experiment3b/results.json` và `clip_s3s4_objw` (λ=0.5) từ `outputs/experiment3d/results.json`. Config: epsilon=8.0, num_iter=10, decay=1.0, objective=cls, k=3.
+
+| Setting | ConvNeXt | Swin | CrossAvg | R101 | WhiteBox | TransferGap |
+|---|---|---|---|---|---|---|
+| baseline | 0.4507 | 0.3751 | 0.4129 | 0.7115 | 0.9536 | +0.2986 |
+| clip_s3 (chỉ Stage 3) | 0.4525 | 0.3922 | 0.4223 | 0.7148 | 0.9590 | +0.2924 |
+| clip_s4 (chỉ Stage 4) | 0.4513 | 0.3977 | 0.4245 | 0.7200 | 0.9583 | +0.2955 |
+| clip_s3s4 (cả 2, đã có từ 3B) | 0.4631 | 0.3946 | 0.4289 | 0.7161 | 0.9603 | +0.2872 |
+| clip_s3s4_objw (đã có từ 3D, λ=0.5) | 0.4714 | 0.4062 | 0.4388 | 0.7056 | 0.9637 | +0.2668 |
+
+**Kết luận**: Stage 3 và Stage 4 đóng góp riêng lẻ với độ lớn gần tương đương nhau (CrossAvg +0.0094 và +0.0116 so với baseline), kết hợp cả hai (`clip_s3s4`) cho gain lớn hơn tổng ước lượng thô một chút (+0.016) — không phải 1 stage "gánh" toàn bộ hiệu ứng còn stage kia vô dụng, cả hai đều cần thiết. Object-weighting (`clip_s3s4_objw`) cộng thêm lợi ích rõ rệt nhất trong toàn bộ chuỗi (CrossAvg lên 0.4388, TransferGap xuống thấp nhất +0.2668) — khớp với kết luận đã có ở 3B. Kết quả: `outputs/experiment3e/results.json`.
+
+### Thí nghiệm 3F — Mechanism Validation (n=300): tín hiệu từ sanity-test n=5 KHÔNG tái lập được ở mẫu đầy đủ
+
+Đo cos(g_s, g_t) trước/sau khi áp regularization (Stage 3-4, k=3, λ=0.5, mode `clip_weight`) lên gradient của surrogate, cùng population object đã dùng ở Thí nghiệm 2A (`outputs/experiment2a/records.jsonl`, 299/300 ảnh dùng được, 4855 record).
+
+| Target | mean_cos_before | mean_cos_after | delta |
+|---|---|---|---|
+| target_r101 (same-family) | 0.1247 | 0.1104 | −0.0143 |
+| target_convnext_t (cross-CNN) | 0.0697 | 0.0658 | **−0.0039** |
+| target_swin_t (CNN→Transformer) | 0.0360 | 0.0362 | +0.0002 |
+
+Hypothesis (xem docstring `experiments/experiment3f.py`, đặt ra dựa trên sanity-test n=5 ở entry HANDOFF 2026-09-20: R101 delta=−0.0089, ConvNeXt delta=+0.0010, Swin delta=+0.0052 — cả 2 cross-family dương): regularization phải làm TĂNG cos_sim(g_s,g_t) rõ rệt ở ConvNeXt/Swin (cross-family) trong khi R101 (same-family) không cần tăng.
+
+**Ở n=300 đầy đủ, tín hiệu này không tái lập được**: R101 vẫn âm đúng hướng (−0.0143), nhưng ConvNeXt lại ÂM (−0.0039, ngược dấu so với sanity n=5) và Swin chỉ dương cực nhỏ, gần như bằng 0 (+0.0002) — không đủ lớn để coi là "tăng gradient alignment cross-family" có ý nghĩa. Sanity-test n=5 trước đó ("tín hiệu rất đúng hướng hypothesis") hóa ra là nhiễu mẫu nhỏ, không phải xu hướng thật.
+
+**Diễn giải quan trọng**: cơ chế "regularization tăng ASR cross-family BẰNG CÁCH tăng gradient alignment với target" — vốn là lý do thiết kế Thí nghiệm 3F để nối RQ2→RQ3 — **không được xác nhận trực tiếp bởi dữ liệu này**, dù bản thân việc regularization tăng ASR cross-family là thật (đã confirm chắc chắn qua 3A/3B/3C/3D/3E). Cần diễn giải cẩn trọng, KHÔNG viết "regularization hoạt động thông qua tăng gradient alignment" như 1 cơ chế đã chứng minh — có thể ASR tăng đến từ lý do khác (vd giảm variance/outlier gradient giúp attack ổn định hơn qua các bước iterate, ít bị "lệch hướng" bởi vài giá trị cực trị, không nhất thiết phải đo được bằng cos_sim tổng thể ở granularity per-object hiện tại). Kết quả: `outputs/experiment3f/records.jsonl`, `outputs/experiment3f/summary.json`.
+
+### Bước tiếp theo
+
+Theo roadmap 4 bước đã đặt ở entry HANDOFF 2026-09-20: (1) Component ablation — XONG (3E, kết quả rõ ràng, khớp hypothesis). (2) Mask/control ablation (object mask thật vs uniform vs random cùng diện tích) — vẫn CHƯA làm, đang hoãn. (3) Mechanism validation — XONG nhưng là **negative/inconclusive finding** (3F, không xác nhận được cơ chế gradient-alignment như kỳ vọng) — cần cân nhắc lại cách diễn giải "tại sao regularization giúp transfer" trước khi viết claim cơ chế vào research_plan.md/paper sau này, có thể cần đo thêm 1 metric khác (vd variance/norm của gradient trước-sau, không chỉ hướng) để tìm cơ chế thật. (4) Full baseline comparison (MI-FGSM/DI-FGSM/OSFD/TGR/MIG) — vẫn CHƯA bắt đầu.
+
+Chưa cập nhật research_plan.md để phản ánh finding của 3F (negative) — cần hỏi user hướng diễn giải trước khi sửa phần method/RQ3 trong đó.
+
+## 2026-09-21 — Thí nghiệm 3G: gradient concentration/tail (n=300) — mechanistic checkpoint mới sau negative finding của 3F
+
+### Bối cảnh và thiết kế
+
+Sau 3F (không xác nhận được "regularization tăng cos_sim(g_s,g_t)"), thống nhất với user: lùi lại 1 bước, hỏi câu hẹp và rẻ hơn trước — **regularization thực sự làm gì với backward signal của chính surrogate** (không cần target, không cần cos_sim với ai) — trước khi hỏi tiếp nó giúp transfer bằng cơ chế nào. Đây là bước #1 trong 4 bước đề xuất (order rẻ→sâu): (1) gradient concentration/tail — làm ở entry này, (2) iteration stability, (3) transformation consistency, (4) tuỳ kết quả.
+
+Cách làm (tận dụng 1 tính chất quan trọng): `_make_reg_hook` (`attacks/backward_reg_attack.py`) là hàm THUẦN TÚY của `(grad, mask, k)`, không phụ thuộc gì khác trong graph — nên chỉ cần 1 lần forward+backward trên surrogate (KHÔNG cần target, KHÔNG cần chạy attack 10-iteration), bắt gradient RAW tại Stage 3/4 bằng "spy" hook (chỉ ghi lại, không sửa), rồi tính REG offline bằng cách gọi thẳng `_make_reg_hook` lên đúng RAW đó. Rẻ hơn hẳn 3E/3F (không cần load 3 target model, không cần vòng lặp attack) — tốc độ thực tế 1.38 ảnh/s (so với 0.25-0.55 ảnh/s của 3E/3F cùng máy). Code: `experiments/experiment3g.py`.
+
+Đo 2 biến thể REG cùng lúc (rẻ, chỉ là 2 lệnh elementwise nữa trên cùng RAW đã có): `reg_clip` (mode "clip" thuần, = `reg_s3s4` 3A/3B, không mask) và `reg_clip_weight` (mode "clip_weight", k=3, λ=0.5 — đúng config method hiện tại, khớp 3D/3E/3F). Đơn vị phân tích: **1 ảnh = 1 row** (gradient của loss TOÀN ẢNH, không phải per-object như 2A/2C/3F) — tự nhiên không có vấn đề "nhiều object cùng ảnh không độc lập" mà user lưu ý, nên dùng thẳng Wilcoxon signed-rank (paired theo ảnh, n=300) không cần cluster-correction gì thêm.
+
+6 thống kê trên toàn bộ tensor gradient mỗi stage: `std`, `max_abs`, `kurtosis` (excess, Fisher), `frac_outside_3sigma` (dùng μ,σ của CHÍNH tensor đó — xem giới hạn bên dưới), `top1pct_energy_frac` (tỷ lệ năng lượng nằm trong top 1% phần tử |giá trị| lớn nhất), `linf_over_l2` (proxy concentration rẻ).
+
+### Kết quả (n=300, 600 record = 300 ảnh × 2 stage, Wilcoxon paired mọi p≈6e-51)
+
+| Metric | Stage | raw | reg_clip | reg_clip_weight |
+|---|---|---|---|---|
+| std | 3 | 7.16e-05 | 3.83e-05 (−46%) | 3.91e-05 (−45%) |
+| std | 4 | 9.49e-05 | 4.39e-05 (−54%) | 4.46e-05 (−53%) |
+| max_abs | 3 | 0.005885 | 0.000215 (27×↓) | 0.000753 (7.8×↓) |
+| max_abs | 4 | 0.006080 | 0.000285 (21×↓) | 0.000604 (10×↓) |
+| kurtosis | 3 | 452.2 | 24.2 (19×↓) | 33.8 (13×↓) |
+| kurtosis | 4 | 311.0 | 37.3 (8.3×↓) | 45.5 (6.8×↓) |
+| top1%-energy | 3 | 0.712 | 0.356 (−50%) | 0.369 (−48%) |
+| top1%-energy | 4 | 0.693 | 0.410 (−41%) | 0.416 (−40%) |
+| L∞/L2 | 3 | 0.0439 | 0.0030 (14×↓) | 0.0107 (4.1×↓) |
+| L∞/L2 | 4 | 0.0372 | 0.0047 (7.9×↓) | 0.0090 (4.1×↓) |
+| frac_outside_3σ | 3 | 0.0162 | 0.0309 (tăng ~1.9×) | 0.0305 (tăng ~1.9×) |
+| frac_outside_3σ | 4 | 0.0161 | 0.0279 (tăng ~1.7×) | 0.0277 (tăng ~1.7×) |
+
+### Kết luận đã chốt (user, 2026-09-21)
+
+> Clipping không làm gradient biến mất (std chỉ giảm ~45-54%), nhưng giảm cực mạnh concentration/tail dominance: max_abs giảm 8-27×, kurtosis giảm 6.8-19×, top-1% energy giảm ~40-50%, L∞/L2 giảm ~4-14×. Effect nhất quán ở cả Stage 3 và 4, Wilcoxon paired theo ảnh cho p cực nhỏ.
+
+**Giới hạn đã ghi nhận**: `frac_outside_3sigma` đi NGƯỢC chiều dự đoán (tăng ~1.7-1.9× sau reg) — do dùng ngưỡng tự tham chiếu (μ,σ của chính tensor sau khi đã bị nén nhỏ lại), không nên dùng làm evidence chính. Nếu cần một tail-fraction metric trong tương lai, nên dùng ngưỡng CỐ ĐỊNH lấy từ phân phối RAW (vd `P(|g_reg − μ_raw| > 3σ_raw)`) hoặc percentile threshold lấy từ raw áp cho cả raw/reg, thay vì để mỗi tensor tự định nghĩa ngưỡng của chính nó — CHƯA làm lại, để dành nếu cần dùng metric này về sau. 4/5 metric còn lại đồng thuận mạnh, không phụ thuộc vào điểm giới hạn này.
+
+**Gate đạt**: reduction mạnh, ổn định, không phải tautology thuần túy (std không sụp về 0) → đủ điều kiện sang bước #2 (iteration stability). Kết quả: `outputs/experiment3g/records.jsonl`, `outputs/experiment3g/summary.json`.
+
+### Thí nghiệm 3H — Iteration stability (n=300): có ý nghĩa thống kê nhưng effect size khiêm tốn, không mạnh như 3G
+
+Chạy attack thật 10-iteration (baseline vs reg, cùng config k=3/λ=0.5/clip_weight/Stage 3-4), log mỗi iteration `grad_norm` (tensor thực sự được cộng dồn vào momentum trong attack thật). Đơn vị: 1 ảnh = 1 row (không cần target model). Code: `experiments/experiment3h.py`.
+
+| Metric | baseline | reg | diff | p (Wilcoxon paired) | Đúng chiều? |
+|---|---|---|---|---|---|
+| mean_cos_consecutive | 0.1419 | 0.1731 | +0.0312 | 1.18e-14 | ✓ |
+| mean_sign_flip_rate | 0.384 | 0.3824 | −0.0016 | 5.03e-09 | ✓ (cực nhỏ) |
+| mean_rel_change_norm | 1.283 | 1.257 | −0.0259 | 6.63e-12 | ✓ |
+| mean_cos_drift | 0.0111 | 0.0186 | +0.0075 | 2.32e-11 | ✓ |
+| final_cos_drift (g1 vs g10) | −0.0104 | −0.0112 | −0.0007 | 0.139 (không ý nghĩa) | ✗ ngược nhẹ |
+
+**Kết luận đã chốt (user, 2026-09-21)**: 4/5 metric có p cực nhỏ và đúng chiều, nhưng đây là hệ quả của n=300 cặp rất nhất quán (power cao) chứ KHÔNG phải effect lớn — nhìn độ lớn tuyệt đối, `sign_flip_rate` gần như không đổi (38.4%→38.2%), `cos_drift` vẫn rất gần 0 ở cả 2 phía. `final_cos_drift` (so trực tiếp g1 với g10) KHÔNG có ý nghĩa và hơi ngược chiều — hiệu ứng "bớt trôi dạt" rõ ở các iteration giữa nhưng không giữ được tới bước cuối.
+
+> **Iteration stability is a secondary consequence of backward regularization, not sufficient evidence for the primary mechanism.**
+
+Quyết định: KHÔNG nhảy sang transformation consistency (#3, đắt hơn, xa intervention hơn, nguy cơ "tìm metric cho đẹp"). Thay vào đó làm **Thí nghiệm 3I** — linkage test rẻ và targeted hơn, xem bên dưới. Kết quả: `outputs/experiment3h/records.jsonl`, `outputs/experiment3h/summary.json`.
+
+### Thí nghiệm 3I — Linkage test (n=300): kết quả sạch nhất trong chuỗi 3F→3I, đặc thù cross-family
+
+Câu hỏi (thu hẹp từ mechanism story chung, thống nhất với user 2026-09-21, sau khi 3F negative và 3H yếu): thay vì tiếp tục tìm cơ chế tổng quát (cosine alignment — bác bỏ ở 3F; trajectory stability — yếu ở 3H), hỏi trực tiếp và hẹp hơn: **per-image reduction in gradient concentration (ΔC, đã có sẵn từ 3G) có tương quan với việc 1 object "giành lại" được transfer (baseline fail → reg success) hay không?**
+
+Thiết kế rẻ nhờ tái sử dụng tối đa dữ liệu đã có: `evaded_baseline` per object/target lấy thẳng từ `outputs/experiment2a/records.jsonl` (baseline MI-FGSM, cùng config), `ΔC(image)` lấy thẳng từ `outputs/experiment3g/records.jsonl` (raw − reg_clip_weight, trung bình Stage 3+4, metric `top1pct_energy_frac`) — cả 2 KHÔNG cần tính lại. Việc MỚI duy nhất: chạy attack REG (Stage 3-4, k=3, λ=0.5, clip_weight — dùng thẳng `iterative_linf_attack_reg` có sẵn) trên surrogate cho 300 ảnh, predict trên 3 target để lấy `evaded_reg` per object, so khớp object_idx với population 2A (không cần predict lại ảnh sạch). Code: `experiments/experiment3i.py`.
+
+Đơn vị phân tích: **1 (ảnh, target) = 1 row** — với mỗi ảnh/target có ≥1 object baseline-fail, tính `gained_rate = n_gained / n_baseline_fail` (gained = object F→T). Test: Mann-Whitney U so ΔC giữa nhóm ảnh `gained_rate>0` vs `gained_rate==0` (độc lập hoàn toàn giữa các ảnh, không cần cluster-correction) + Spearman correlation(ΔC, gained_rate).
+
+**Kết quả (n=300, 299 ảnh dùng được, 723 record):**
+
+| Target | n (ảnh,target) | ΔC(ảnh có gain) | ΔC(ảnh không gain) | MWU p (1 phía) | Spearman ρ | Spearman p |
+|---|---|---|---|---|---|---|
+| target_r101 (same-family, **control**) | 190 | 0.337 | 0.321 | 0.199 (không ý nghĩa) | 0.046 | 0.527 (không ý nghĩa) |
+| target_convnext_t (cross-CNN) | 260 | 0.378 | 0.301 | **1.32e-04** | **0.205** | **8.84e-04** |
+| target_swin_t (CNN→Transformer) | 273 | 0.366 | 0.303 | **1.51e-04** | **0.187** | **1.88e-03** |
+
+### Kết luận đã chốt (user, 2026-09-21) — kết quả sạch nhất trong chuỗi
+
+> Ảnh có ΔC lớn hơn có tỷ lệ "giành lại" object bị né tránh cao hơn — nhưng CHỈ đúng ở 2 target cross-family (ConvNeXt, Swin), KHÔNG đúng ở R101 (same-family, đối chứng). Đây là pattern đặc thù cross-family, không phải hiệu ứng attack mạnh lên chung chung.
+
+Chuỗi cơ chế an toàn để dùng, KHÔNG cần cosine alignment (3F, bác bỏ) hay trajectory stability tổng quát (3H, yếu) làm mắt xích bắt buộc:
+
+$$
+\boxed{\text{Suppressing extreme backward-gradient concentration at Stage 3-4} \rightarrow \text{higher per-image rate of newly-evaded objects, specifically for cross-family targets}}
+$$
+
+**Tổng kết cả chuỗi 3F-3I (mechanism cho method v0.1)**:
+- 3F (cosine alignment với target) — **negative**, không dùng làm mechanism.
+- 3G (gradient concentration/tail tại surrogate) — **strong**, giảm mạnh và nhất quán (p≈6e-51).
+- 3H (iteration trajectory stability) — **weak but consistent**, effect size nhỏ, không giữ được tới iteration cuối.
+- 3I (linkage ΔC ↔ transfer gain, per ảnh/target) — **strong và đặc thù cross-family**, kết quả rõ nhất, có đối chứng same-family sạch.
+
+Kết quả: `outputs/experiment3i/records.jsonl`, `outputs/experiment3i/summary.json`.
+
+### Bước tiếp theo
+
+Cân nhắc cập nhật `research_plan.md` §9.1/RQ3 để phản ánh chuỗi cơ chế cuối cùng (3G+3I là bằng chứng chính, 3F/3H là phụ/negative — không viết "tăng gradient alignment" như cơ chế nữa). Sau đó chuyển sang roadmap còn lại: mask/control ablation (bước 2, đang hoãn) + full baseline comparison với TGR/MIG/OSFD/DI-FGSM (bước 4, chưa bắt đầu) — theo đúng quyết định đã thống nhất, không đào thêm transformation consistency.
+
+**Cập nhật ngay sau đó, cùng ngày**: đã cập nhật `research_plan.md` §9.2 (Mechanism, mới) + RQ2 (thêm ghi chú phạm vi, phân biệt "diagnostic RQ2" với "method mechanism") + RQ3 (trả lời có điều kiện, chưa khóa hoàn toàn) — xem file đó để có công thức đầy đủ. Tóm tắt: claim an toàn dùng cho paper là *"Suppressing extreme mid/deep backward-gradient concentration is strongly associated with improved transfer specifically to cross-family targets, while no corresponding association is observed for the same-family control."*
+
+## 2026-09-21 — Đổi ưu tiên: OSFD matched-budget comparison TRƯỚC mask/control ablation — kết quả bất lợi cho method v0.1
+
+### Quyết định đổi roadmap
+
+User yêu cầu dừng `experiment3j.py` (mask/control ablation, đang chạy dở — đã kill tmux job, không mất gì vì chưa có kết quả n=300 nào) để ưu tiên **so sánh với baseline mạnh trước khi freeze method**, đặc biệt OSFD (Wu et al., AAAI 2024) — lý do: mọi kết quả tới giờ (3A-3I) chỉ so với baseline của chính mình, chưa trả lời được "method có đáng làm contribution chính không". Roadmap mới: `Freeze v0.1 → Strong baseline comparison (n=300) → {competitive: mask ablation + n=1000 | yếu: phân tích/redesign}`.
+
+User tự clone official OSFD repo (`github.com/wakuwu/OSFD`) vào `/workspace/OSFD` để đọc trực tiếp source code, không đoán từ paper text.
+
+### Đọc code OSFD — phát hiện quan trọng về threat model
+
+Đọc `attack/ours/OSFD.py` + `attack/base/RRB.py` + `attack/Attack.py`:
+- Loss thật: `MSE(k * feat_clean, feat_adv)` (k=3.0), tính trên **toàn bộ 4 stage backbone**, KHÔNG mask theo GT box. "Object-Aware" trong tên paper nằm ở **RRB** (Random Rotation + adaptive Resizing + Blur — 1 base attack họ combine cùng MI), không phải ở loss: mỗi iteration tạo 2 "view" nối tiếp (rotate quanh 1 GT box ngẫu nhiên → resize thích ứng theo 1 GT box ngẫu nhiên khác, áp lên view đã rotate) rồi blur, loss cộng dồn qua cả 2 view.
+- **Threat model gốc khác hẳn dự án**: `steps=10` mỗi epoch nhưng `max_epoch=20`, noise carry-over giữa epoch (buffer) → tổng ~200 bước gradient trong cùng 1 quả epsilon (không phải epsilon nhân theo epoch). `epsilon=5` (không phải 8 như dự án). Native-config đầy đủ (2000 ảnh VOC × 200 bước) không khả thi thời gian trên máy hiện tại (CPU-bound, đã biết từ đầu session).
+- **Quyết định scope (thống nhất với user)**: (1) **OSFD-matched** — port đúng thuật toán (loss+RRB+MI) vào pipeline hiện tại, chạy epsilon=8/num_iter=10 y hệt mọi thí nghiệm khác, PRIMARY comparison. (2) **OSFD-extended** — budget lớn hơn (chưa làm), sanity check phụ, KHÔNG dùng để claim thắng/thua. KHÔNG dựng lại native env (mmdet 2.28.2 cũ) trừ khi cần fidelity-check riêng.
+
+### Port `attacks/osfd_attack.py` + `experiments/experiment4a.py`
+
+Port trực tiếp từ code gốc, giữ nguyên hyperparameter RRB/k từ `config/attack_faster_rcnn.yaml` (k=3.0, theta=7.0, l_s=10, rho=0.8, s_max=1.10, sigma=6.0). Khác biệt CỐ Ý (matched-budget): epsilon=8.0, num_iter=10, alpha=epsilon/num_iter thay vì epsilon=5 + alpha=1.0 cố định + 200 bước.
+
+**Bug tự phát hiện + fix trước khi tin số liệu** (user yêu cầu audit lại logic trước khi chốt kết quả — đúng, vì kết quả ban đầu bất ngờ/bất lợi): review từng dòng so với code gốc, verify bằng số học công thức loss (`F.mse_loss` gộp batch N view × N == tổng N `mse_loss` riêng lẻ — verify bằng script Python, khớp tuyệt đối). Phát hiện 1 lỗi thật: `_random_axis_rotation` dùng `[W/2, H/2]` (đúng thứ tự x,y mà `torchvision.transforms.functional.rotate` cần) trong khi code GỐC dùng `[H//2, W//2]` (ĐẢO trục — 1 quirk/bug thật trong `attack/base/RRB.py` dòng 64, không phải cách hiểu sai của mình). Vì mục tiêu port là fidelity với thuật toán họ THỰC SỰ chạy, đã sửa lại để REPLICATE ĐÚNG behavior gốc (kể cả quirk này), không dùng bản "đã sửa lỗi hộ họ". Re-run n=300 sau fix — chênh lệch với bản trước fix chỉ ~0.5-1 điểm % ở mọi ô (nằm trong biên độ nhiễu run-to-run đã biết), xác nhận bug không phải nguyên nhân chính của kết quả bất lợi. Bản trước fix lưu tại `outputs/experiment4a/results_pre_rotation_fix.json` (tham khảo, không dùng).
+
+### Kết quả (n=300, sau fix — số liệu chính thức)
+
+| Method | WhiteBox | R101 | ConvNeXt | Swin | CrossAvg | TransferGap |
+|---|---|---|---|---|---|---|
+| MI-FGSM (Exp1B n=300, Run B) | 0.9563 | 0.7082 | 0.4530 | 0.3751 | 0.4141 | +0.2942 |
+| **OSFD-matched** | 0.8440 | 0.7036 | 0.5629 | 0.5131 | **0.5380** | +0.1656 |
+| DI-FGSM (Exp1B n=300, Run E) | 0.8998 | 0.7731 | 0.6273 | 0.5308 | **0.5791** | +0.1941 |
+| **Ours v0.1** (clip_s3s4_objw, λ=0.5, Exp3E) | 0.9637 | 0.7056 | 0.4714 | 0.4062 | **0.4388** | +0.2668 |
+
+### Kết luận — theo đúng gate đã đặt trước khi chạy: KHÔNG freeze method
+
+Đọc đúng thứ tự ưu tiên (ConvNeXt → Swin → CrossAvg → R101 → WhiteBox, KHÔNG phải WhiteBox):
+- **OSFD thắng rõ Ours ở cả ConvNeXt (0.563 vs 0.471, +0.092) và Swin (0.513 vs 0.406, +0.107)** — không phải thắng nhẹ.
+- **DI-FGSM (baseline đơn giản, không có thiết kế mechanism) còn thắng cả OSFD lẫn Ours trên CrossAvg** (0.579 — cao nhất bảng).
+- WhiteBox của Ours cao nhất (0.964) nhưng đây KHÔNG phải tiêu chí quan trọng (đã thống nhất từ đầu).
+
+Theo gate: **"OSFD vượt xa → chưa freeze method"**. Giả thuyết làm việc (chưa verify): điểm chung giữa OSFD (RRB) và DI-FGSM (resize+pad) là **input-transformation/augmentation trong lúc tấn công** — method v0.1 hoàn toàn không có augmentation nào (chỉ backward regularization tĩnh). 2 cơ chế này (augmentation vs backward-concentration-suppression) CÓ THỂ bổ trợ nhau thay vì loại trừ.
+
+Kết quả: `outputs/experiment4a/results.json`, `outputs/experiment4a/raw_predictions.json`.
+
+### Bước tiếp theo
+
+Chưa quyết — 3 hướng đã đề xuất cho user chọn: (1) phân tích ablation OSFD-loss KHÔNG RRB (cô lập đóng góp riêng của feature-distortion loss vs augmentation), (2) thử kết hợp backward-reg (method mình) + input-diversity (kiểu DI-FGSM/RRB) xem có cộng hưởng không, (3) khác. `experiments/experiment3j.py` (mask/control ablation) vẫn còn nguyên, CHƯA XONG (đã kill giữa chừng để ưu tiên việc này) — cần quay lại sau khi quyết định hướng method.
